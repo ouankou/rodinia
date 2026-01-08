@@ -75,7 +75,7 @@ if should_run kmeans; then
     echo "kmeans: generating ${out}"
     cxx="${CXX:-c++}"
     "${cxx}" -O2 -std=c++11 \
-      "${ROOT_DIR}/data/kmeans/inpuGen/datagen.cpp" \
+      "${ROOT_DIR}/data/kmeans/inputGen/datagen.cpp" \
       -o "${BUILD_DIR}/kmeans_datagen"
     rm -f "${BUILD_DIR}/819200_34.txt"
     (

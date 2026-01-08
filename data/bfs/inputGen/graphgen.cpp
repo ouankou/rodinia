@@ -1,11 +1,11 @@
 /*
  * graphgen.cpp
- * by Sam Kauffman - Univeristy of Virginia
+ * by Sam Kauffman - University of Virginia
  *
  * This program generates graphs of the format described in GraphFormat.txt
  * and SampleGraph.jpg for use with BFS (breadth-first search) in Rodinia.
  *
- * The graph is not guaranteed to be connected, are there may be multiple edges
+ * The graph is not guaranteed to be connected, and there may be multiple edges
  * and loops.
  *
  * Usage:
@@ -47,7 +47,7 @@ struct edge {
 
 int main( int argc, char ** argv )
 {
-	// Parse command lined
+	// Parse command line
 	ulong numNodes;
 	string s;
 	if ( argc < 2 )

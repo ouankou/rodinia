@@ -22,5 +22,5 @@ meaningful.
 
 Local generation (optional for smaller datasets):
   - bfs: data/bfs/inputGen (build graphgen and run for desired size; gen_dataset.sh includes graph1MW_6)
-  - kmeans: data/kmeans/inpuGen (build datagen and run for desired size)
+  - kmeans: data/kmeans/inputGen (build datagen and run for desired size)
   - mummergpu: python3 data/mummergpu/genreads.py data/mummergpu/NC_003997.fna 100 <reads> > data/mummergpu/NC_003997_q100bp.fna

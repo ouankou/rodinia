@@ -1,7 +1,7 @@
 /*********************
 
 Hotspot Expand
-by Sam Kauffman - Univeristy of Virginia
+by Sam Kauffman - University of Virginia
 Generate larger input files for Hotspot by expanding smaller versions
 
 */
