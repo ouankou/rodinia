@@ -42,14 +42,11 @@ static	char	rcsid[] = "$Id: bkpfacto.c,v 1.7 1994/01/13 05:45:50 des Exp $";
 #define alpha	0.6403882032022076 /* = (1+sqrt(17))/8 */
 
 /* sqr -- returns square of x -- utility function */
-double	sqr(x)
-double	x;
+double	sqr(double x)
 {	return x*x;	}
 
 /* interchange -- a row/column swap routine */
-static void interchange(A,i,j)
-MAT	*A;	/* assumed != NULL & also SQUARE */
-int	i, j;	/* assumed in range */
+static void interchange(MAT *A, int i, int j)	/* assumed != NULL & also SQUARE */
 {
 	Real	**A_me, tmp;
 	int	k, n;
@@ -321,4 +318,3 @@ VEC	*BKPsolve(const MAT *A, PERM *pivot, const PERM *block,
 }
 
 		
-

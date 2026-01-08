@@ -78,35 +78,16 @@ typedef struct Iter_data {
    Fun_Ax  BTx; /* function computing y = B^T*x; B - preconditioner */
    void *BT_par;         /* parameters for BTx */
 
-#ifdef ANSI_C
-
-#ifdef PROTOTYPES_IN_STRUCT
-   void (*info)(struct Iter_data *, double, VEC *,VEC *);
+   void (*info)(const struct Iter_data *, double, VEC *,VEC *);
             /* function giving some information for a user;
 	       nres - a norm of a residual res */
    
-   int (*stop_crit)(struct Iter_data *, double, VEC *,VEC *);
+   int (*stop_crit)(const struct Iter_data *, double, VEC *,VEC *);
            /* stopping criterion:
 	      nres - a norm of res;
 	      res - residual;
 	    if returned value == TRUE then stop;
 	    if returned value == FALSE then continue; */
-#else
-   void (*info)();
-   int  (*stop_crit)();
-#endif /* PROTOTYPES_IN_STRUCT */
-
-#else
-
-   void (*info)();
-            /* function giving some information for a user */
-   
-   int (*stop_crit)();
-           /* stopping criterion:
-	    if returned value == TRUE then stop;
-	    if returned value == FALSE then continue; */
-
-#endif /* ANSI_C */
 
    Real init_res;   /* the norm of the initial residual */
 
@@ -116,18 +97,10 @@ typedef struct Iter_data {
 #define INULL   (ITER *)NULL
 
 /* type Fun_info */
-#ifdef ANSI_C
-typedef void (*Fun_info)(ITER *, double, VEC *,VEC *);
-#else
-typedef void (*Fun_info)();
-#endif
+typedef void (*Fun_info)(const ITER *, double, VEC *,VEC *);
 
 /* type Fun_stp_crt */
-#ifdef ANSI_C
-typedef int (*Fun_stp_crt)(ITER *, double, VEC *,VEC *);
-#else
-typedef int (*Fun_stp_crt)();
-#endif
+typedef int (*Fun_stp_crt)(const ITER *, double, VEC *,VEC *);
 
 
 

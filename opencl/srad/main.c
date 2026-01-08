@@ -249,12 +249,12 @@ main(	int argc,
 	//======================================================================================================================================================150
 
 	printf("Time spent in different stages of the application:\n");
-	printf("%.12f s, %.12f % : READ COMMAND LINE PARAMETERS\n", 						(fp) (time1-time0) / 1000000, (fp) (time1-time0) / (fp) (time5-time0) * 100);
-	printf("%.12f s, %.12f % : READ AND RESIZE INPUT IMAGE FROM FILE\n", 				(fp) (time2-time1) / 1000000, (fp) (time2-time1) / (fp) (time5-time0) * 100);
-	printf("%.12f s, %.12f % : SETUP\n", 												(fp) (time3-time2) / 1000000, (fp) (time3-time2) / (fp) (time5-time0) * 100);
-	printf("%.12f s, %.12f % : KERNEL\n", 												(fp) (time4-time3) / 1000000, (fp) (time4-time3) / (fp) (time5-time0) * 100);
-	printf("%.12f s, %.12f % : WRITE OUTPUT IMAGE TO FILE\n", 							(fp) (time5-time4) / 1000000, (fp) (time5-time4) / (fp) (time5-time0) * 100);
-	printf("%.12f s, %.12f % : FREE MEMORY\n", 											(fp) (time6-time5) / 1000000, (fp) (time6-time5) / (fp) (time5-time0) * 100);
+	printf("%.12f s, %.12f %% : READ COMMAND LINE PARAMETERS\n", 						(fp) (time1-time0) / 1000000, (fp) (time1-time0) / (fp) (time5-time0) * 100);
+	printf("%.12f s, %.12f %% : READ AND RESIZE INPUT IMAGE FROM FILE\n", 				(fp) (time2-time1) / 1000000, (fp) (time2-time1) / (fp) (time5-time0) * 100);
+	printf("%.12f s, %.12f %% : SETUP\n", 												(fp) (time3-time2) / 1000000, (fp) (time3-time2) / (fp) (time5-time0) * 100);
+	printf("%.12f s, %.12f %% : KERNEL\n", 												(fp) (time4-time3) / 1000000, (fp) (time4-time3) / (fp) (time5-time0) * 100);
+	printf("%.12f s, %.12f %% : WRITE OUTPUT IMAGE TO FILE\n", 							(fp) (time5-time4) / 1000000, (fp) (time5-time4) / (fp) (time5-time0) * 100);
+	printf("%.12f s, %.12f %% : FREE MEMORY\n", 											(fp) (time6-time5) / 1000000, (fp) (time6-time5) / (fp) (time5-time0) * 100);
 	printf("Total time:\n");
 	printf("%.12f s\n", 																(fp) (time5-time0) / 1000000);
 

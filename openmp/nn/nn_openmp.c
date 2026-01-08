@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <sys/time.h>
+#include <time.h>
 #include <omp.h>
 
 #define MAX_ARGS 10
@@ -156,4 +157,3 @@ int main(int argc, char* argv[]) {
     printf("total time : %15.12f s", (float) (time1 - time0) / 1000000);
     return 0;
 }
-

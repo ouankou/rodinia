@@ -29,7 +29,7 @@
 #if COALESCED_QUERIES
 #define GETQCHAR(qrypos) ((queries[((qrypos) >> 2) << 4]) & ((0xFF) << (((qrypos) & 0x00000003)) << 3)) >> ((((qrypos) & 0x00000003 )) << 3)
 #elif QRYTEX
-#define GETQCHAR(qrypos) tex1Dfetch(qrytex, qryAddr + qrypos)
+#define GETQCHAR(qrypos) tex1Dfetch<char>(qrytex_obj, qryAddr + qrypos)
 #else
 #define GETQCHAR(qrypos) queries[qrypos]
 #endif
@@ -127,22 +127,21 @@
 #define SHIFT_QUERIES(queries, qryAddr) queries += qryAddr
 #endif
 
-#if REORDER_TREE
-texture<uint4, 2, cudaReadModeElementType> nodetex;
-texture<uint4, 2, cudaReadModeElementType> childrentex;
-#else
-texture<uint4, 1, cudaReadModeElementType> nodetex;
-texture<uint4, 1, cudaReadModeElementType> childrentex;
+#if NODETEX
+__device__ cudaTextureObject_t nodetex_obj;
 #endif
 
-
-#if REORDER_REF
-texture<char, 2, cudaReadModeElementType> reftex;
-#else
-texture<char, 1, cudaReadModeElementType> reftex;
+#if CHILDTEX
+__device__ cudaTextureObject_t childrentex_obj;
 #endif
 
-texture<char, 1, cudaReadModeElementType> qrytex;
+#if REFTEX
+__device__ cudaTextureObject_t reftex_obj;
+#endif
+
+#if QRYTEX
+__device__ cudaTextureObject_t qrytex_obj;
+#endif
 
  struct __align__(8) _MatchCoord
  {
@@ -251,7 +250,7 @@ __device__ int addr2id(unsigned int addr)
 #endif
 }
 
- __device__ TextureAddress id2addr(int id)
+ __host__ __device__ TextureAddress id2addr(int id)
  {
      TextureAddress retval;
  
@@ -316,13 +315,13 @@ __device__ char getRef(int refpos
     int x = bigx >> 2;
    
 	#if REFTEX
-		return tex2D(reftex, x, y);
+		return tex2D<char>(reftex_obj, x + 0.5f, y + 0.5f);
 	#else
 		return *(ref + 65536 * y + x);
 	#endif
 #else
 	#if REFTEX
-		return tex1Dfetch(reftex, refpos);
+		return tex1Dfetch<char>(reftex_obj, refpos);
 	#else
 		return ref[refpos];
 	#endif
@@ -372,9 +371,9 @@ __device__ uint4 getNode(unsigned int cur,
 
 #if NODETEX
 #if REORDER_TREE
-  return tex2D(nodetex, cur & 0x0000FFFF, (cur & 0xFFFF0000) >> 16);
+  return tex2D<uint4>(nodetex_obj, (cur & 0x0000FFFF) + 0.5f, ((cur & 0xFFFF0000) >> 16) + 0.5f);
 #else
-  return tex1Dfetch(nodetex, cur);
+  return tex1Dfetch<uint4>(nodetex_obj, cur);
 #endif
 
 #else
@@ -415,9 +414,9 @@ __device__ uint4 getChildren(unsigned int cur,
 
 #if CHILDTEX
 #if REORDER_TREE
-  return tex2D(childrentex, cur & 0x0000FFFF, (cur & 0xFFFF0000) >> 16);
+  return tex2D<uint4>(childrentex_obj, (cur & 0x0000FFFF) + 0.5f, ((cur & 0xFFFF0000) >> 16) + 0.5f);
 #else
-  return tex1Dfetch(childrentex, cur);
+  return tex1Dfetch<uint4>(childrentex_obj, cur);
 #endif
 #else
 #if REORDER_TREE
@@ -579,7 +578,7 @@ __device__ void printNode(int nodeid
   char leafchar = cd.leafchar;
 
 
-  XPRINTF("%d\t"fNID"\t%d\t%d\t%d\t%d\t"fNID"\t"fNID"\t"fNID"\t"fNID"\t"fNID"\t"fNID"\t"fNID"\n",
+  XPRINTF("%d\t" fNID "\t%d\t%d\t%d\t%d\t" fNID "\t" fNID "\t" fNID "\t" fNID "\t" fNID "\t" fNID "\t" fNID "\n",
           nodeid, NID(addr), start, end, depth, leafchar, 
           NID(a), NID(c), NID(g), NID(t), NID(d), NID(p), NID(s));
 }
@@ -657,7 +656,7 @@ __device__ void set_result(unsigned int cur,
 #if VERBOSE
     _PixelOfNode nd; nd.data = GETNODE(cur, false);
 
-    XPRINTF("  saving match cur=%d "fNID" len=%d edge_match=%d depth=%d\n",
+    XPRINTF("  saving match cur=%d " fNID " len=%d edge_match=%d depth=%d\n",
             result->data.x, NID(cur), qry_match_len, edge_match_length, MKI(nd.depth));
 
 #endif
@@ -752,7 +751,7 @@ mummergpuKernel(void* match_coords,
 
         char c = GETQCHAR(qrystart + qry_match_len);
 
-        XPRINTF("In node ("fNID"): starting with %c [%d] =>  \n",
+        XPRINTF("In node (" fNID "): starting with %c [%d] =>  \n",
                 NID(cur), c, qry_match_len);
 
         int refpos = 0;
@@ -775,7 +774,7 @@ mummergpuKernel(void* match_coords,
 			
 			arrayToAddress(next, cur);
 				
-            XPRINTF(" In node: ("fNID")\n", NID(cur));
+            XPRINTF(" In node: (" fNID ")\n", NID(cur));
 
             // No edge to follow out of the node
             if (cur == 0) {
@@ -1095,7 +1094,7 @@ printKernel(MatchInfo * matches,
   _PixelOfNode node;
   node.data = GETNODE(cur, true);
   
-  XPRINTF("starting node: %d "fNID" depth: %d\n", matches[matchid].matchnode, NID(cur), MKI(node.depth));
+  XPRINTF("starting node: %d " fNID " depth: %d\n", matches[matchid].matchnode, NID(cur), MKI(node.depth));
 
   while (MKI(node.depth) > min_match_length)
   {
@@ -1103,7 +1102,7 @@ printKernel(MatchInfo * matches,
     arrayToAddress(node.parent, cur);
     node.data = GETNODE(cur, true);
 
-    XPRINTF("par: "fNID" depth: %d\n", NID(cur), MKI(node.depth));
+    XPRINTF("par: " fNID " depth: %d\n", NID(cur), MKI(node.depth));
   }
 
   
@@ -1111,7 +1110,7 @@ printKernel(MatchInfo * matches,
   unsigned int badParent = cur;
   cur = printParent;
   
-  XPRINTF(" printParent: "fNID"\n", NID(printParent));
+  XPRINTF(" printParent: " fNID "\n", NID(printParent));
   
   char curchild = 'A';
   bool forceToParent = false;
@@ -1143,7 +1142,7 @@ printKernel(MatchInfo * matches,
     children.data = GETCHILDREN(cur, true);
     char isLeaf = children.leafchar;
 
-    XPRINTF(" cur: "fNID" curchild: %c isLeaf:%d forceToParent:%d\n", 
+    XPRINTF(" cur: " fNID " curchild: %c isLeaf:%d forceToParent:%d\n", 
             NID(cur), curchild, isLeaf, forceToParent);
 
     if (isLeaf || forceToParent)

@@ -76,8 +76,6 @@ typedef struct {
 
 
 
-#ifdef ANSI_C
-
 int  mem_info_is_on(void);
 int mem_info_on(int sw);
 
@@ -96,37 +94,12 @@ int mem_stat_free_list(int mark,int list);
 int mem_stat_show_mark(void);
 void mem_stat_dump(FILE *fp,int list);
 int mem_attach_list(int list,int ntypes,char *type_names[],
-	int (*free_funcs[])(), MEM_ARRAY info_sum[]);
+	int (*free_funcs[])(void *), MEM_ARRAY info_sum[]);
 int mem_free_vars(int list);
 int mem_is_list_attached(int list);
 void mem_dump_list(FILE *fp,int list);
 int mem_stat_reg_vars(int list,int type,char *fname,int line,...);
 #endif /* THREADSAFE */
-#else
-int mem_info_is_on();
-int mem_info_on();
-
-long mem_info_bytes();
-int mem_info_numvar();
-void mem_info_file();
-
-void mem_bytes_list();
-void mem_numvar_list();
-
-#ifndef THREADSAFE
-int mem_stat_reg_list();
-int mem_stat_mark();
-int mem_stat_free_list();
-int mem_stat_show_mark();
-void mem_stat_dump();
-int mem_attach_list();
-int mem_free_vars();
-int mem_is_list_attached();
-void mem_dump_list();
-int mem_stat_reg_vars();
-#endif /* THREADSAFE */
-
-#endif 
 
 /* macros */
 
@@ -152,7 +125,7 @@ int mem_stat_reg_vars();
 
 typedef struct {
    char **type_names;        /* array of names of types (strings) */
-   int  (**free_funcs)();    /* array of functions for releasing types */
+   int  (**free_funcs)(void *);    /* array of functions for releasing types */
    unsigned ntypes;          /* max number of types */
    MEM_ARRAY *info_sum;      /* local array for keeping track of memory */
 } MEM_CONNECT;

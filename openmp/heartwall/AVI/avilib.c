@@ -904,7 +904,15 @@ static int avi_write_data(avi_t *AVI, char *data, unsigned long length, int audi
    /* Add index entry */
 
    //set tag for current audio track
-   sprintf((char *)astr, "0%1dwb", AVI->aptr+1);
+   if (AVI->aptr < 0 || AVI->aptr >= AVI_MAX_TRACKS) {
+     AVI_errno = AVI_ERR_WRITE;
+     return -1;
+   }
+   astr[0] = '0';
+   astr[1] = (unsigned char)('0' + (AVI->aptr + 1));
+   astr[2] = 'w';
+   astr[3] = 'b';
+   astr[4] = '\0';
 
    if(audio)
      n = avi_add_index_entry(AVI,astr,0x00,AVI->pos,length);

@@ -118,10 +118,15 @@ void read_graphics(	char* filename,
 	//================================================================================80
 
 	i = 0;
-	while(i<3){
+	while(i < 3){
 		c = fgetc(fid);
+		if(c == EOF){
+			fprintf(stderr, "Unexpected EOF while reading PGM header\n");
+			fclose(fid);
+			return;
+		}
 		if(c == '\n'){
-			i = i+1;
+			i = i + 1;
 		}
 	};
 
@@ -132,7 +137,11 @@ void read_graphics(	char* filename,
 	if(major==0){																// if matrix is saved row major in memory (C)
 		for(i=0; i<data_rows; i++){
 			for(j=0; j<data_cols; j++){
-				fscanf(fid, "%d", &temp);
+				if (fscanf(fid, "%d", &temp) != 1) {
+					fprintf(stderr, "Error reading PGM data\n");
+					fclose(fid);
+					return;
+				}
 				input[i*data_cols+j] = (fp)temp;
 			}
 		}
@@ -140,7 +149,11 @@ void read_graphics(	char* filename,
 	else{																				// if matrix is saved column major in memory (MATLAB)
 		for(i=0; i<data_rows; i++){
 			for(j=0; j<data_cols; j++){
-				fscanf(fid, "%d", &temp);
+				if (fscanf(fid, "%d", &temp) != 1) {
+					fprintf(stderr, "Error reading PGM data\n");
+					fclose(fid);
+					return;
+				}
 				input[j*data_rows+i] = (fp)temp;
 			}
 		}

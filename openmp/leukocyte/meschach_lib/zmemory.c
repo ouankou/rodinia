@@ -453,7 +453,7 @@ int zv_get_vars(int dim,...)
    ZVEC **par;
    
    va_start(ap, dim);
-   while (par = va_arg(ap,ZVEC **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZVEC **))) {   /* NULL ends the list*/
       *par = zv_get(dim);
       i++;
    } 
@@ -471,7 +471,7 @@ int zm_get_vars(int m,int n,...)
    ZMAT **par;
    
    va_start(ap, n);
-   while (par = va_arg(ap,ZMAT **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZMAT **))) {   /* NULL ends the list*/
       *par = zm_get(m,n);
       i++;
    } 
@@ -503,7 +503,7 @@ int zv_resize_vars(int new_dim,...)
    ZVEC **par;
    
    va_start(ap, new_dim);
-   while (par = va_arg(ap,ZVEC **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZVEC **))) {   /* NULL ends the list*/
       *par = zv_resize(*par,new_dim);
       i++;
    } 
@@ -521,7 +521,7 @@ int zm_resize_vars(int m,int n,...)
    ZMAT **par;
    
    va_start(ap, n);
-   while (par = va_arg(ap,ZMAT **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZMAT **))) {   /* NULL ends the list*/
       *par = zm_resize(*par,m,n);
       i++;
    } 
@@ -552,7 +552,7 @@ int zv_free_vars(ZVEC **pv,...)
    zv_free(*pv);
    *pv = ZVNULL;
    va_start(ap, pv);
-   while (par = va_arg(ap,ZVEC **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZVEC **))) {   /* NULL ends the list*/
       zv_free(*par); 
       *par = ZVNULL;
       i++;
@@ -573,7 +573,7 @@ int zm_free_vars(ZMAT **va,...)
    zm_free(*va);
    *va = ZMNULL;
    va_start(ap, va);
-   while (par = va_arg(ap,ZMAT **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZMAT **))) {   /* NULL ends the list*/
       zm_free(*par); 
       *par = ZMNULL;
       i++;
@@ -609,7 +609,7 @@ int zv_get_vars(va_alist) va_dcl
    
    va_start(ap);
    dim = va_arg(ap,int);
-   while (par = va_arg(ap,ZVEC **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZVEC **))) {   /* NULL ends the list*/
       *par = zv_get(dim);
       i++;
    } 
@@ -629,7 +629,7 @@ int zm_get_vars(va_alist) va_dcl
    va_start(ap);
    m = va_arg(ap,int);
    n = va_arg(ap,int);
-   while (par = va_arg(ap,ZMAT **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZMAT **))) {   /* NULL ends the list*/
       *par = zm_get(m,n);
       i++;
    } 
@@ -662,7 +662,7 @@ int zv_resize_vars(va_alist) va_dcl
    
    va_start(ap);
    new_dim = va_arg(ap,int);
-   while (par = va_arg(ap,ZVEC **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZVEC **))) {   /* NULL ends the list*/
       *par = zv_resize(*par,new_dim);
       i++;
    } 
@@ -681,7 +681,7 @@ int zm_resize_vars(va_alist) va_dcl
    va_start(ap);
    m = va_arg(ap,int);
    n = va_arg(ap,int);
-   while (par = va_arg(ap,ZMAT **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZMAT **))) {   /* NULL ends the list*/
       *par = zm_resize(*par,m,n);
       i++;
    } 
@@ -711,7 +711,7 @@ int zv_free_vars(va_alist) va_dcl
    ZVEC **par;
    
    va_start(ap);
-   while (par = va_arg(ap,ZVEC **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZVEC **))) {   /* NULL ends the list*/
       zv_free(*par); 
       *par = ZVNULL;
       i++;
@@ -730,7 +730,7 @@ int zm_free_vars(va_alist) va_dcl
    ZMAT **par;
    
    va_start(ap);
-   while (par = va_arg(ap,ZMAT **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,ZMAT **))) {   /* NULL ends the list*/
       zm_free(*par); 
       *par = ZMNULL;
       i++;
@@ -742,4 +742,3 @@ int zm_free_vars(va_alist) va_dcl
 
 
 #endif
-

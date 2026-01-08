@@ -62,7 +62,11 @@ void BFSGraph( int argc, char** argv)
 
 	int source = 0;
 
-	fscanf(fp,"%d",&no_of_nodes);
+	if (fscanf(fp,"%d",&no_of_nodes) != 1) {
+		fprintf(stderr, "Error reading node count\n");
+		fclose(fp);
+		return;
+	}
    
 	// allocate host memory
 	Node* h_graph_nodes = (Node*) malloc(sizeof(Node)*no_of_nodes);
@@ -74,7 +78,11 @@ void BFSGraph( int argc, char** argv)
 	// initalize the memory
 	for( unsigned int i = 0; i < no_of_nodes; i++) 
 	{
-		fscanf(fp,"%d %d",&start,&edgeno);
+		if (fscanf(fp,"%d %d",&start,&edgeno) != 2) {
+			fprintf(stderr, "Error reading node data\n");
+			fclose(fp);
+			return;
+		}
 		h_graph_nodes[i].starting = start;
 		h_graph_nodes[i].no_of_edges = edgeno;
 		h_graph_mask[i]=false;
@@ -83,21 +91,32 @@ void BFSGraph( int argc, char** argv)
 	}
 
 	//read the source node from the file
-	fscanf(fp,"%d",&source);
+	if (fscanf(fp,"%d",&source) != 1) {
+		fprintf(stderr, "Error reading source node\n");
+		fclose(fp);
+		return;
+	}
 	// source=0; //tesing code line
 
 	//set the source node as true in the mask
 	h_graph_mask[source]=true;
 	h_graph_visited[source]=true;
 
-	fscanf(fp,"%d",&edge_list_size);
+	if (fscanf(fp,"%d",&edge_list_size) != 1) {
+		fprintf(stderr, "Error reading edge list size\n");
+		fclose(fp);
+		return;
+	}
 
 	int id,cost;
 	int* h_graph_edges = (int*) malloc(sizeof(int)*edge_list_size);
 	for(int i=0; i < edge_list_size ; i++)
 	{
-		fscanf(fp,"%d",&id);
-		fscanf(fp,"%d",&cost);
+		if (fscanf(fp,"%d",&id) != 1 || fscanf(fp,"%d",&cost) != 1) {
+			fprintf(stderr, "Error reading edge data\n");
+			fclose(fp);
+			return;
+		}
 		h_graph_edges[i] = id;
 	}
 
@@ -192,4 +211,3 @@ void BFSGraph( int argc, char** argv)
 	free( h_cost);
 
 }
-

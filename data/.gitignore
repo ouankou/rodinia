@@ -1,0 +1,4 @@
+# Generated large inputs (see scripts/generate_data.sh)
+leukocyte/testfile.avi
+kmeans/819200.txt
+mummergpu/NC_003997_q100bp.fna

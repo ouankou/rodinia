@@ -32,6 +32,7 @@ static	char	rcsid[] = "$Id: otherio.c,v 1.2 1994/01/13 05:34:52 des Exp $";
 
 #include	<stdio.h>
 #include	<ctype.h>
+#include	<unistd.h>
 #include	"matrix.h"
 
 
@@ -176,5 +177,4 @@ double	fin_double(FILE *fp, const char *s, double low, double high)
 							low,high);
 	}
 }
-
 
