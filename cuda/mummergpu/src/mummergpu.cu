@@ -130,7 +130,7 @@ static cudaTextureObject_t create_array_texture(cudaArray_t array,
 	return obj;
 }
 
-static cudaTextureObject_t __attribute__((unused)) create_linear_texture(const void *dev_ptr,
+static cudaTextureObject_t create_linear_texture(const void *dev_ptr,
                                                  cudaChannelFormatDesc desc,
                                                  size_t bytes)
 {
