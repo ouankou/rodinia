@@ -64,7 +64,7 @@ void cuda_print_double_array(double *array_GPU, size_t size) {
     printf("PRINTING ARRAY VALUES\n");
     //print values in memory
     for (size_t i = 0; i < size; ++i) {
-        printf("[%d]:%0.6f\n", i, mem[i]);
+        printf("[%zu]:%0.6f\n", i, mem[i]);
     }
     printf("FINISHED PRINTING ARRAY VALUES\n");
 
@@ -740,7 +740,7 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
     }//end loop
 
     //block till kernels are finished
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     long long back_time = get_time();
 
     cudaFree(xj_GPU);

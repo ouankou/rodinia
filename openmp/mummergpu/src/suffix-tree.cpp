@@ -8,10 +8,12 @@
 #include <vector>
 #include <queue>
 #include <cstring>
+#include <cstdint>
 
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -181,8 +183,7 @@ public:
 
   int id()
   {
-    if (this) { return m_nodeid; }
-    return 0;
+    return m_nodeid;
   }
 
   void setPrintParent(int min_match_len)
@@ -1151,7 +1152,8 @@ void buildNodeTexture(SuffixNode * node,
     
   aux_data[origid].length = node->len();
   aux_data[origid].numleaves = node->m_numleaves;
-  aux_data[origid].printParent = id2addr(node->m_printParent->id());
+  SuffixNode *print_parent = node->m_printParent ? node->m_printParent : node;
+  aux_data[origid].printParent = id2addr(print_parent->id());
 
   TextureAddress myaddress(id2addr(origid));
 
@@ -1207,11 +1209,13 @@ void buildNodeTexture(SuffixNode * node,
   writeAddress(arr, myaddress);
   TextureAddress newaddr = arrayToAddress(arr);
 
-  TextureAddress parent(id2addr(node->m_parent->id()));
+  SuffixNode *parent_node = node->m_parent ? node->m_parent : node;
+  TextureAddress parent(id2addr(parent_node->id()));
   writeAddress(nd->parent, parent);
   assert(arrayToAddress(nd->parent).data == parent.data);
 
-  TextureAddress suffix(id2addr(node->m_suffix->id()));
+  SuffixNode *suffix_node = node->m_suffix ? node->m_suffix : node;
+  TextureAddress suffix(id2addr(suffix_node->id()));
   writeAddress(nd->suffix, suffix);
   assert(arrayToAddress(nd->suffix).data == suffix.data);
 
@@ -2100,7 +2104,7 @@ char output_buf[output_buf_limit];
 //FIXME: needs to be reinitialized to zero at the beginning of each round of printing.
 size_t bytes_written = 0;
 
-int addToBuffer(char* string)
+int addToBuffer(const char* string)
 {
 	 size_t buf_length = strlen(string);
 	 
@@ -2176,6 +2180,7 @@ int addMatchToBuffer(int left_in_ref, int qrypos, int matchlen)
 	*p_buf = '\n';
 	++p_buf;
 	bytes_written +=  p_buf - (output_buf + bytes_written);
+	return 0;
 }
 
 #define NODE_LENGTH(x)      (page->ref.aux_data[x].length)

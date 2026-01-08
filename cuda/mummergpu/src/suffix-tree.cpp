@@ -8,10 +8,12 @@
 #include <vector>
 #include <queue>
 #include <cstring>
+#include <cstdint>
 
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <errno.h>
 #include <assert.h>
 #include <stdint.h> 
@@ -2101,7 +2103,7 @@ char output_buf[output_buf_limit];
 //FIXME: needs to be reinitialized to zero at the beginning of each round of printing.
 size_t bytes_written = 0;
 
-int addToBuffer(char* string)
+int addToBuffer(const char* string)
 {
 	 size_t buf_length = strlen(string);
 	 
@@ -2177,6 +2179,7 @@ int addMatchToBuffer(int left_in_ref, int qrypos, int matchlen)
 	*p_buf = '\n';
 	++p_buf;
 	bytes_written +=  p_buf - (output_buf + bytes_written);
+	return 0;
 }
 
 #define NODE_LENGTH(x)      (page->ref.aux_data[x].length)

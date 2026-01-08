@@ -34,16 +34,33 @@ typedef struct {
 
 /*** User-level functions ***/
 
-void bpnn_initialize();
+float drnd(void);
+float dpn1(void);
+float squash(float x);
+float *alloc_1d_dbl(int n);
+float **alloc_2d_dbl(int m, int n);
 
-BPNN *bpnn_create();
-void bpnn_free();
+void bpnn_randomize_weights(float **w, int m, int n);
+void bpnn_randomize_row(float *w, int m);
+void bpnn_zero_weights(float **w, int m, int n);
 
-void bpnn_train();
-void bpnn_feedforward();
+void bpnn_initialize(int seed);
+void bpnn_layerforward(float *l1, float *l2, float **conn, int n1, int n2);
+void bpnn_output_error(float *delta, float *target, float *output, int nj, float *err);
+void bpnn_hidden_error(float *delta_h, int nh, float *delta_o, int no, float **who, float *hidden, float *err);
+void bpnn_adjust_weights(float *delta, int ndelta, float *ly, int nly, float **w, float **oldw);
 
-void bpnn_save();
-BPNN *bpnn_read();
+BPNN *bpnn_create(int n_in, int n_hidden, int n_out);
+void bpnn_free(BPNN *net);
+void bpnn_train(BPNN *net, float *eo, float *eh);
+void bpnn_feedforward(BPNN *net);
+
+void bpnn_save(BPNN *net, const char *filename);
+BPNN *bpnn_read(const char *filename);
+
+void bpnn_train_kernel(BPNN *net, float *eo, float *eh);
+void load(BPNN *net);
+int setup(int argc, char **argv);
 
 
 #endif

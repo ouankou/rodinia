@@ -171,7 +171,13 @@ struct ReferencePage {
     Reference ref;
 };
 
-TextureAddress id2addr(int id);
+#if defined(__CUDACC__)
+#define MUMMERGPU_HOST_DEVICE __host__ __device__
+#else
+#define MUMMERGPU_HOST_DEVICE
+#endif
+MUMMERGPU_HOST_DEVICE TextureAddress id2addr(int id);
+#undef MUMMERGPU_HOST_DEVICE
 
 int createReference(const char* fromFile, Reference* ref);
 int destroyReference(Reference* ref);

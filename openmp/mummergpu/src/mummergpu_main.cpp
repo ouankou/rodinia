@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fstream>
+#include <cstdint>
 
 #define int2 int32_t
 #define ulong4 uint32_t
@@ -163,5 +164,4 @@ int main(int argc, char* argv[])
 	  exit(err);
    }   
 }
-
 

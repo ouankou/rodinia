@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <cstdint>
 
 #include <fstream>
 
@@ -7,15 +8,13 @@
 #define int2 int32_t
 #define uint4 uint32_t
 
-#include "omp.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include "mummergpu.h"
 // Matches are reported as a node in the suffix tree,
 // plus a distance up the node's parent link for partial
 // matches on the patch from the root to the node
-
-#define OMP
-#define N_THREADS 8
-
 
 static const int maxdim = 4096;
 
@@ -90,7 +89,7 @@ static const int maxdim = 4096;
 /// getRef
 //////////////////////////////////
 
-char getRef(int refpos, char* ref)
+static char getRef(int refpos, char* ref)
 {
 	return ref[refpos];
 }
@@ -328,7 +327,7 @@ int kernel_gold(int qryid,
 
 	        char c = GETQCHAR(qrystart + qry_match_len);
 
-	        XPRINTF("In node ("fNID"): starting with %c [%d] =>  \n",
+	        XPRINTF("In node (" fNID "): starting with %c [%d] =>  \n",
 	                NID(cur), c, qry_match_len);
 
 	        unsigned int refpos = 0;
@@ -351,7 +350,7 @@ int kernel_gold(int qryid,
 
 				//arrayToAddress(next, cur);
 
-	            XPRINTF(" In node: ("fNID")\n", NID(cur));
+	            XPRINTF(" In node: (" fNID ")\n", NID(cur));
 
 	            // No edge to follow out of the node
 	            if (cur == 0) {
@@ -796,38 +795,39 @@ void computeGold(MatchResults* results,
 				 int match_length,
 				 int rc)
 {
+#ifdef _OPENMP
+   static int printed = 0;
+   if (!printed) {
+      fprintf(stderr, "num of omp threads: %d\n", omp_get_max_threads());
+      printed = 1;
+   }
+#endif
 
    if (rc == REVERSE)
    {
-   
-#ifdef OMP
-    omp_set_num_threads(N_THREADS);
-	//fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
-   #pragma omp parallel for 
+#ifdef _OPENMP
+   #pragma omp parallel for
 #endif
 	  for (int i = 0; i < numQueries; ++i)
 	  {
-		 rc_kernel_gold(i, 
-					 results, 
-					 refstr, 
-					 queries, 
-					 queryAddrs, 
+		 rc_kernel_gold(i,
+					 results,
+					 refstr,
+					 queries,
+					 queryAddrs,
 					 queryLengths,
-					 nodeTexture, 
+					 nodeTexture,
 					 childrenTexture,
-					 numQueries, 
+					 numQueries,
 					 match_length);
 	  }
 
-	  
+
    }
    else
    {
-    
-#ifdef OMP
-	omp_set_num_threads(N_THREADS);
-	fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
-	#pragma omp parallel for 
+#ifdef _OPENMP
+	#pragma omp parallel for
 #endif
 	  for (int i = 0; i < numQueries; ++i)
 	  {
@@ -866,4 +866,3 @@ void computeGold(MatchResults* results,
 	  }
    }
 }
-

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fstream>
+#include <cstdint>
 #include <stdint.h>
 
 #define int2 int32_t
@@ -164,5 +165,4 @@ int main(int argc, char* argv[])
 	  exit(err);
    }   
 }
-
 

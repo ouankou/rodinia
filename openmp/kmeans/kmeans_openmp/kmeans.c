@@ -75,6 +75,8 @@
 #include <math.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 #include <omp.h>
 #include "getopt.h"
 
@@ -95,6 +97,26 @@ void usage(char *argv0) {
 		"       -n no. of threads	: number of threads";
     fprintf(stderr, help, argv0);
     exit(-1);
+}
+
+static void read_full_or_die(int fd, void *buf, size_t len, const char *label) {
+    size_t offset = 0;
+
+    while (offset < len) {
+        ssize_t nread = read(fd, (char *)buf + offset, len - offset);
+        if (nread < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            fprintf(stderr, "Error: failed to read %s\n", label);
+            exit(1);
+        }
+        if (nread == 0) {
+            fprintf(stderr, "Error: unexpected EOF while reading %s\n", label);
+            exit(1);
+        }
+        offset += (size_t)nread;
+    }
 }
 
 /*---< main() >-------------------------------------------------------------*/
@@ -149,8 +171,8 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
             exit(1);
         }
-        read(infile, &numObjects,    sizeof(int));
-        read(infile, &numAttributes, sizeof(int));
+        read_full_or_die(infile, &numObjects, sizeof(int), "numObjects");
+        read_full_or_die(infile, &numAttributes, sizeof(int), "numAttributes");
    
 
         /* allocate space for attributes[] and read attributes of all objects */
@@ -160,7 +182,9 @@ int main(int argc, char **argv) {
         for (i=1; i<numObjects; i++)
             attributes[i] = attributes[i-1] + numAttributes;
 
-        read(infile, buf, numObjects*numAttributes*sizeof(float));
+        read_full_or_die(infile, buf,
+                         (size_t)numObjects * (size_t)numAttributes * sizeof(float),
+                         "attributes");
 
         close(infile);
     }
@@ -241,4 +265,3 @@ int main(int argc, char **argv) {
     free(buf);
     return(0);
 }
-

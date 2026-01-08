@@ -7,8 +7,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Includes
 ////////////////////////////////////////////////////////////////////////////////
-#include <GL/glew.h>
-#include <GL/glut.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -103,13 +101,12 @@ void bucketSort(float *d_input, float *d_output, int listsize,
 	///////////////////////////////////////////////////////////////////////////
 	checkCudaErrors(cudaMemcpy(l_pivotpoints, pivotPoints, (DIVISIONS)*sizeof(int), cudaMemcpyHostToDevice)); 
 	checkCudaErrors(cudaMemset((void *) d_offsets, 0, DIVISIONS * sizeof(int))); 
-	checkCudaErrors(cudaBindTexture(0, texPivot, l_pivotpoints, DIVISIONS * sizeof(int))); 
 	// Setup block and grid
     dim3 threads(BUCKET_THREAD_N, 1);
 	int blocks = ((listsize - 1) / (threads.x * BUCKET_BAND)) + 1; 
     dim3 grid(blocks, 1);
 	// Find the new indice for all elements
-	bucketcount <<< grid, threads >>>(d_input, d_indice, d_prefixoffsets, listsize);
+	bucketcount <<< grid, threads >>>(d_input, l_pivotpoints, d_indice, d_prefixoffsets, listsize);
 	///////////////////////////////////////////////////////////////////////////
 	// Prefix scan offsets and align each division to float4 (required by 
 	// mergesort)

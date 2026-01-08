@@ -12,6 +12,7 @@
 
 #include <omp.h>									// (in directory known to compiler)
 #include <stdlib.h>									// (in directory known to compiler)
+#include <stdio.h>
 
 //======================================================================================================================================================150
 //	COMMON
@@ -157,8 +158,8 @@ kernel_cpu_2(	int cores_arg,
 
 	printf("Time spent in different stages of CPU/MCPU KERNEL:\n");
 
-	printf("%15.12f s, %15.12f % : MCPU: SET DEVICE\n",					(float) (time1-time0) / 1000000, (float) (time1-time0) / (float) (time2-time0) * 100);
-	printf("%15.12f s, %15.12f % : CPU/MCPU: KERNEL\n",					(float) (time2-time1) / 1000000, (float) (time2-time1) / (float) (time2-time0) * 100);
+	printf("%15.12f s, %15.12f %% : MCPU: SET DEVICE\n",					(float) (time1-time0) / 1000000, (float) (time1-time0) / (float) (time2-time0) * 100);
+	printf("%15.12f s, %15.12f %% : CPU/MCPU: KERNEL\n",					(float) (time2-time1) / 1000000, (float) (time2-time1) / (float) (time2-time0) * 100);
 
 	printf("Total time:\n");
 	printf("%.12f s\n", 												(float) (time2-time0) / 1000000);

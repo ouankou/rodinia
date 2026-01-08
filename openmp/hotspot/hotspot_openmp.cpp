@@ -208,13 +208,13 @@ void compute_tran_temp(FLOAT *result, int num_iterations, FLOAT *temp, FLOAT *po
 	#endif
 }
 
-void fatal(char *s)
+void fatal(const char *s)
 {
 	fprintf(stderr, "error: %s\n", s);
 	exit(1);
 }
 
-void writeoutput(FLOAT *vect, int grid_rows, int grid_cols, char *file) {
+void writeoutput(FLOAT *vect, int grid_rows, int grid_cols, const char *file) {
 
     int i,j, index=0;
     FILE *fp;
@@ -236,7 +236,7 @@ void writeoutput(FLOAT *vect, int grid_rows, int grid_cols, char *file) {
     fclose(fp);	
 }
 
-void read_input(FLOAT *vect, int grid_rows, int grid_cols, char *file)
+void read_input(FLOAT *vect, int grid_rows, int grid_cols, const char *file)
 {
   	int i, index;
 	FILE *fp;
@@ -248,8 +248,7 @@ void read_input(FLOAT *vect, int grid_rows, int grid_cols, char *file)
 		fatal ("file could not be opened for reading");
 
 	for (i=0; i < grid_rows * grid_cols; i++) {
-		fgets(str, STR_SIZE, fp);
-		if (feof(fp))
+		if (fgets(str, STR_SIZE, fp) == NULL)
 			fatal("not enough lines in file");
 		if ((sscanf(str, "%f", &val) != 1) )
 			fatal("invalid file format");

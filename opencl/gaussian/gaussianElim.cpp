@@ -300,7 +300,7 @@ izeFan2Buf[1])*localWorksizeFan2Buf[1];
         }
         clReleaseEvent(kernelEvent);
 		//Fan1<<<dimGrid,dimBlock>>>(m_cuda,a_cuda,Size,t);
-		//cudaThreadSynchronize();
+		//cudaDeviceSynchronize();
 		
 		// kernel args
 		argchk  = clSetKernelArg(fan2_kernel, 0, sizeof(cl_mem), (void *)&m_dev);
@@ -325,7 +325,7 @@ izeFan2Buf[1])*localWorksizeFan2Buf[1];
         }
         clReleaseEvent(kernelEvent);
 		//Fan2<<<dimGridXY,dimBlockXY>>>(m_cuda,a_cuda,b_cuda,Size,Size-t,t);
-		//cudaThreadSynchronize();
+		//cudaDeviceSynchronize();
 	}
     // 5. transfer data off of device
     error = clEnqueueReadBuffer(command_queue,

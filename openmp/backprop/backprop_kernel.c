@@ -35,7 +35,7 @@ double gettime() {
 int
 main( int argc, char** argv) 
 {
-	setup(argc, argv);
+	return setup(argc, argv);
 }
 
 
