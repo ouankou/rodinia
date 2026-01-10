@@ -134,9 +134,11 @@ int work(	int xmax,
 	for(i=0; i<workload; i++){
 		read("../../data/myocyte/params.txt",
 					params[i],
-					PARAMETERS,
+					PARAMETERS - 2,
 					1,
 					0);
+		params[i][16] = (fp)135;
+		params[i][17] = (fp)1;
 	}
 
 	time3 = get_time();

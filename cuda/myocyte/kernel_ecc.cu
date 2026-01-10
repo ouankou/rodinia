@@ -432,7 +432,7 @@ __device__ void kernel_ecc(	fp timeinst,
 	//=====================================================================
 
 	// input parameters
-	cycleLength = d_params[15];
+	cycleLength = d_params[0];
 
 	// variable references
 	offset_1 = valu_offset;

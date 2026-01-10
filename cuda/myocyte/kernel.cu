@@ -66,7 +66,7 @@ __global__ void kernel(	int timeinst,
 
 			// specific
 			valu_offset = 46;
-			params_offset = 0;
+			params_offset = 1;
 			com_offset = 0;
 			CaDyad = d_initvalu[35]*1e3;									// from ECC model, *** Converting from [mM] to [uM] ***
 			// cam function for Dyad
@@ -82,7 +82,7 @@ __global__ void kernel(	int timeinst,
 
 			// specific
 			valu_offset = 61;
-			params_offset = 5;
+			params_offset = 6;
 			com_offset = 1;
 			CaSL = d_initvalu[36]*1e3;										// from ECC model, *** Converting from [mM] to [uM] ***
 			// cam function for Dyad
@@ -98,7 +98,7 @@ __global__ void kernel(	int timeinst,
 
 			// specific
 			valu_offset = 76;
-			params_offset = 10;
+			params_offset = 11;
 			com_offset = 2;
 			CaCyt = d_initvalu[37]*1e3;										// from ECC model, *** Converting from [mM] to [uM] ***
 			// cam function for Dyad
