@@ -132,13 +132,33 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	const char *tempchar = "./kmeans.cl";
 	FILE * fp = fopen(tempchar, "rb"); 
 	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); free(source); return -1; }
-	size_t read_size = fread(source, 1, (size_t)sourcesize - 1, fp);
-	if (read_size == 0 && ferror(fp)) {
+	if (fseek(fp, 0, SEEK_END) != 0) {
 		printf("ERROR: unable to read '%s'\n", tempchar);
 		fclose(fp);
 		free(source);
 		return -1;
 	}
+	long fsize = ftell(fp);
+	if (fsize < 0) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	if (fsize >= sourcesize) {
+		printf("ERROR: kernel file '%s' is too large\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	rewind(fp);
+	if (fread(source, 1, (size_t)fsize, fp) != (size_t)fsize) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	source[fsize] = '\0';
 	fclose(fp);
 		
 	// OpenCL initialization
