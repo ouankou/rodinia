@@ -2152,7 +2152,7 @@ main(	int argc,
 				// get # of queries from user
 				int count;
 				sscanf(commandPointer, "%d", &count);
-				while(*commandPointer!=' ' && *commandPointer!='\n')
+				while(*commandPointer!=' ' && *commandPointer!='\n' && *commandPointer!='\0')
 				  commandPointer++;
 
 				printf("\n ******command: k count=%d \n",count);
@@ -2277,12 +2277,12 @@ main(	int argc,
 				// get # of queries from user
 				int count;
 				sscanf(commandPointer, "%d", &count);
-				while(*commandPointer!=' ' && *commandPointer!='\n')
+				while(*commandPointer!=' ' && *commandPointer!='\n' && *commandPointer!='\0')
 				  commandPointer++;
 
 				int rSize;
 				sscanf(commandPointer, "%d", &rSize);
-				while(*commandPointer!=' ' && *commandPointer!='\n')
+				while(*commandPointer!=' ' && *commandPointer!='\n' && *commandPointer!='\0')
 				  commandPointer++;
 
 				printf("\n******command: j count=%d, rSize=%d \n",count, rSize);
