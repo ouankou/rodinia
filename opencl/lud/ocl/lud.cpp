@@ -202,7 +202,7 @@ main ( int argc, char *argv[] )
 	const char *kernel_lud_inter  = "lud_internal";
 	const char *kernel_path = "./lud_kernel.cl";
 	FILE * fp = fopen(kernel_path, "rb");
-	if(!fp) { printf("ERROR: unable to open '%s'\n", kernel_path); return -1; }
+	if(!fp) { printf("ERROR: unable to open '%s'\n", kernel_path); free(source); return -1; }
 	size_t read_size = fread(source, 1, (size_t)sourcesize - 1, fp);
 	if (read_size == 0 && ferror(fp)) {
 		printf("ERROR: unable to read '%s'\n", kernel_path);
@@ -222,13 +222,14 @@ main ( int argc, char *argv[] )
 	// OpenCL initialization
 	if (initialize(use_gpu)) {
 		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+		free(source);
 		return -1;
 	}
 	// compile kernel
 	cl_int err = 0;
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); free(source); return -1; }
 	char clOptions[110];
 	//  sprintf(clOptions,"-I../../src"); 
 	sprintf(clOptions," ");
@@ -244,7 +245,9 @@ main ( int argc, char *argv[] )
 		//clGetProgramBuildInfo(prog, device_id, CL_PROGRAM_BUILD_LOG, sizeof(log)-1, log, NULL);
 		//if(err || strstr(log,"warning:") || strstr(log, "error:")) printf("<<<<\n%s\n>>>>\n", log);
 	}
-	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); free(source); return -1; }
+	free(source);
+	source = NULL;
     
 	cl_kernel diagnal;
 	cl_kernel perimeter;

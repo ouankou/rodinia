@@ -859,10 +859,10 @@ cl_program cl_compileProgram(char* kernelPath, char* compileoptions, bool verbos
     // Read in the source code
     size_t read_size = fread(source, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
-        if (ferror(fp)) {
-            printf("Error reading kernel file\n");
-            exit(-1);
-        }
+        printf("Error reading kernel file: unexpected EOF or read error\n");
+        free(source);
+        fclose(fp);
+        exit(-1);
     }
     source[size] = '\0';
 

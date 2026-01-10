@@ -131,7 +131,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	// read the kernel core source
 	const char *tempchar = "./kmeans.cl";
 	FILE * fp = fopen(tempchar, "rb"); 
-	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); return -1; }
+	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); free(source); return -1; }
 	size_t read_size = fread(source, 1, (size_t)sourcesize - 1, fp);
 	if (read_size == 0 && ferror(fp)) {
 		printf("ERROR: unable to read '%s'\n", tempchar);
@@ -150,6 +150,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 #endif
 	if (initialize(use_gpu)) {
 		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+		free(source);
 		return -1;
 	}
 
@@ -157,7 +158,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	cl_int err = 0;
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); free(source); return -1; }
 	err = clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
 	if(err != CL_SUCCESS) {
 		size_t log_size = 0;
@@ -171,8 +172,11 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 			}
 		}
 		printf("ERROR: clBuildProgram() => %d\n", err);
+		free(source);
 		return -1;
 	}
+	free(source);
+	source = NULL;
 	
 	const char *kernel_kmeans_c  = "kmeans_kernel_c";
 	const char *kernel_swap  = "kmeans_swap";	

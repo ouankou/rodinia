@@ -505,6 +505,7 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     FILE * fp = fopen(tempchar, "rb");
     if (!fp) {
         printf("ERROR: unable to open '%s'\n", tempchar);
+        free(source);
         return -1;
     }
     size_t read_size = fread(source, 1, (size_t)sourcesize - 1, fp);
@@ -525,6 +526,7 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
 #endif
     if (initialize(use_gpu)) {
         printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+        free(source);
         return -1;
     }
 
@@ -534,6 +536,7 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
     if (err != CL_SUCCESS) {
         printf("ERROR: clCreateProgramWithSource() => %d\n", err);
+        free(source);
         return -1;
     }
 
@@ -576,6 +579,8 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
 
 
     }
+    free(source);
+    source = NULL;
     // { // show warnings/errors
     //     static char log[65536];
     //     memset(log, 0, sizeof (log));

@@ -98,8 +98,6 @@ cl_context CreateContext()
     const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
     std::cerr << "Failed to create an OpenCL " << device_label << " context." << std::endl;
     return NULL;
-    
-    return context;
 
 }
 

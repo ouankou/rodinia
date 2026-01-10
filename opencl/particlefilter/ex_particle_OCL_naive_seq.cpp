@@ -486,6 +486,7 @@ static int allocate(int Nparticles, int countOnes){
 	FILE * fp = fopen(tempchar, "rb");
 	if (!fp) {
 		printf("ERROR: unable to open '%s'\n", tempchar);
+		free(source);
 		return -1;
 	}
 	size_t read_size = fread(source, 1, (size_t)sourcesize - 1, fp);
@@ -506,6 +507,7 @@ static int allocate(int Nparticles, int countOnes){
 #endif
 	if (initialize(use_gpu)) {
 		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+		free(source);
 		return -1;
 	}
 
@@ -515,6 +517,7 @@ static int allocate(int Nparticles, int countOnes){
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
 	if (err != CL_SUCCESS) {
 		printf("ERROR: clCreateProgramWithSource() => %d\n", err);
+		free(source);
 		return -1;
 	}
 	err = clBuildProgram(prog, 0, NULL, "-cl-fast-relaxed-math", NULL, NULL);
@@ -537,8 +540,11 @@ static int allocate(int Nparticles, int countOnes){
 	}//*/
 	if (err != CL_SUCCESS) {
 		printf("ERROR: clBuildProgram() => %d\n", err);
+		free(source);
 		return -1;
 	}
+	free(source);
+	source = NULL;
 
 	const char *particle_kernel = "particle_kernel";
 
