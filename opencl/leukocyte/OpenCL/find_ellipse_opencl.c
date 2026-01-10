@@ -113,8 +113,8 @@ float *GICOV_OpenCL(int grad_m, int grad_n, float *host_grad_x, float *host_grad
 	if(global_work_size % work_group_size > 0)
 	  global_work_size=(global_work_size / work_group_size+1)*work_group_size;
 
-	printf("Find: local_work_size = %d, global_work_size = %d \n"
-	       ,work_group_size, global_work_size);
+	printf("Find: local_work_size = %zu, global_work_size = %zu \n",
+	       work_group_size, global_work_size);
 
 	// Execute the GICOV kernel
 	error = clEnqueueNDRangeKernel(command_queue, GICOV_kernel, 1, NULL, &global_work_size, &work_group_size, 0, NULL, NULL);
@@ -239,7 +239,13 @@ void select_device() {
 	
 		// Create an OpenCL context
 		cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties) platform_ids[i], 0};
-		context = clCreateContextFromType(ctxprop, CL_DEVICE_TYPE_GPU, NULL, NULL, &error);
+		cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+			CL_DEVICE_TYPE_CPU;
+#else
+			CL_DEVICE_TYPE_GPU;
+#endif
+		context = clCreateContextFromType(ctxprop, device_type, NULL, NULL, &error);
 		// If this platform has no GPU, try the next one
 		if (error == CL_DEVICE_NOT_FOUND) continue;
 		check_error(error, __FILE__, __LINE__);
@@ -254,7 +260,8 @@ void select_device() {
 
 		// Create a command queue for the first device
 		device = device_list[0];
-		command_queue = clCreateCommandQueue(context, device, 0, &error);
+		const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+		command_queue = clCreateCommandQueueWithProperties(context, device, queue_props, &error);
 		check_error(error, __FILE__, __LINE__);
 		
 		// Print the device name

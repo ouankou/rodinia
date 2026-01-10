@@ -182,8 +182,14 @@ void _clInit()
     //-----------------------------------------------
     //--cambine-2: create an OpenCL context
     cl_context_properties cprops[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)targetPlatform, 0 };
+    cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+        CL_DEVICE_TYPE_CPU;
+#else
+        CL_DEVICE_TYPE_GPU;
+#endif
     oclHandles.context = clCreateContextFromType(cprops, 
-                                                CL_DEVICE_TYPE_GPU, 
+                                                device_type, 
                                                 NULL, 
                                                 NULL, 
                                                 &resultCL);
@@ -193,7 +199,7 @@ void _clInit()
     //-----------------------------------------------
     //--cambine-3: detect OpenCL devices	
     /* First, get the size of device list */
-   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_GPU, 0, NULL, &deviceListSize);
+   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, device_type, 0, NULL, &deviceListSize);
    if(oclHandles.cl_status!=CL_SUCCESS){
    	throw(string("exception in _clInit -> clGetDeviceIDs"));   	
    }
@@ -209,20 +215,21 @@ void _clInit()
         throw(string("InitCL()::Error: Could not allocate memory."));
 
     /* Next, get the device list data */
-   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_GPU, deviceListSize, \
+   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, device_type, deviceListSize, \
 								oclHandles.devices, NULL);
    if(oclHandles.cl_status!=CL_SUCCESS){
    	throw(string("exception in _clInit -> clGetDeviceIDs-2"));   	
    }
    //-----------------------------------------------
    //--cambine-4: Create an OpenCL command queue    
-    oclHandles.queue = clCreateCommandQueue(oclHandles.context, 
-                                            oclHandles.devices[DEVICE_ID_INUSED], 
-                                            0, 
-                                            &resultCL);
+    const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+    oclHandles.queue = clCreateCommandQueueWithProperties(oclHandles.context, 
+                                                          oclHandles.devices[DEVICE_ID_INUSED], 
+                                                          queue_props, 
+                                                          &resultCL);
 
     if ((resultCL != CL_SUCCESS) || (oclHandles.queue == NULL))
-        throw(string("InitCL()::Creating Command Queue. (clCreateCommandQueue)"));
+        throw(string("InitCL()::Creating Command Queue. (clCreateCommandQueueWithProperties)"));
     //-----------------------------------------------
     //--cambine-5: Load CL file, build CL program object, create CL kernel object
     std::string  source_str = FileToString(kernel_file);
@@ -399,7 +406,7 @@ void _clRelease()
 }
 //--------------------------------------------------------
 //--cambine:create buffer and then copy data from host to device
-cl_mem _clCreateAndCpyMem(int size, void * h_mem_source) throw(string){
+cl_mem _clCreateAndCpyMem(int size, void * h_mem_source){
 	cl_mem d_mem;
 	d_mem = clCreateBuffer(oclHandles.context,	CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,  \
 									size, h_mem_source, &oclHandles.cl_status);
@@ -412,7 +419,7 @@ cl_mem _clCreateAndCpyMem(int size, void * h_mem_source) throw(string){
 //-------------------------------------------------------
 //--cambine:	create read only  buffer for devices
 //--date:	17/01/2011	
-cl_mem _clMallocRW(int size, void * h_mem_ptr) throw(string){
+cl_mem _clMallocRW(int size, void * h_mem_ptr){
  	cl_mem d_mem;
 	d_mem = clCreateBuffer(oclHandles.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, size, h_mem_ptr, &oclHandles.cl_status);
 	#ifdef ERRMSG
@@ -424,7 +431,7 @@ cl_mem _clMallocRW(int size, void * h_mem_ptr) throw(string){
 //-------------------------------------------------------
 //--cambine:	create read and write buffer for devices
 //--date:	17/01/2011	
-cl_mem _clMalloc(int size, void * h_mem_ptr) throw(string){
+cl_mem _clMalloc(int size, void * h_mem_ptr){
  	cl_mem d_mem;
 	d_mem = clCreateBuffer(oclHandles.context, CL_MEM_WRITE_ONLY | CL_MEM_COPY_HOST_PTR, size, h_mem_ptr, &oclHandles.cl_status);
 	#ifdef ERRMSG
@@ -437,7 +444,7 @@ cl_mem _clMalloc(int size, void * h_mem_ptr) throw(string){
 //-------------------------------------------------------
 //--cambine:	transfer data from host to device
 //--date:	17/01/2011
-void _clMemcpyH2D(cl_mem d_mem, int size, const void *h_mem_ptr) throw(string){
+void _clMemcpyH2D(cl_mem d_mem, int size, const void *h_mem_ptr){
 	oclHandles.cl_status = clEnqueueWriteBuffer(oclHandles.queue, d_mem, CL_TRUE, 0, size, h_mem_ptr, 0, NULL, NULL);
 	#ifdef ERRMSG
 	if(oclHandles.cl_status != CL_SUCCESS)
@@ -447,7 +454,7 @@ void _clMemcpyH2D(cl_mem d_mem, int size, const void *h_mem_ptr) throw(string){
 //--------------------------------------------------------
 //--cambine:create buffer and then copy data from host to device with pinned 
 // memory
-cl_mem _clCreateAndCpyPinnedMem(int size, float* h_mem_source) throw(string){
+cl_mem _clCreateAndCpyPinnedMem(int size, float* h_mem_source){
 	cl_mem d_mem, d_mem_pinned;
 	float * h_mem_pinned = NULL;
 	d_mem_pinned = clCreateBuffer(oclHandles.context,	CL_MEM_READ_ONLY|CL_MEM_ALLOC_HOST_PTR,  \
@@ -491,7 +498,7 @@ cl_mem _clCreateAndCpyPinnedMem(int size, float* h_mem_source) throw(string){
 
 //--------------------------------------------------------
 //--cambine:create write only buffer on device
-cl_mem _clMallocWO(int size) throw(string){
+cl_mem _clMallocWO(int size){
 	cl_mem d_mem;
 	d_mem = clCreateBuffer(oclHandles.context, CL_MEM_WRITE_ONLY, size, 0, &oclHandles.cl_status);
 	#ifdef ERRMSG
@@ -503,7 +510,7 @@ cl_mem _clMallocWO(int size) throw(string){
 
 //--------------------------------------------------------
 //transfer data from device to host
-void _clMemcpyD2H(cl_mem d_mem, int size, void * h_mem) throw(string){
+void _clMemcpyD2H(cl_mem d_mem, int size, void * h_mem){
 	oclHandles.cl_status = clEnqueueReadBuffer(oclHandles.queue, d_mem, CL_TRUE, 0, size, h_mem, 0,0,0);
 	#ifdef ERRMSG
 		oclHandles.error_str = "excpetion in _clCpyMemD2H -> ";
@@ -540,7 +547,7 @@ void _clMemcpyD2H(cl_mem d_mem, int size, void * h_mem) throw(string){
 
 //--------------------------------------------------------
 //set kernel arguments
-void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0) throw(string){
+void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0){
 	if(!size){
 		oclHandles.cl_status = clSetKernelArg(oclHandles.kernel[kernel_id], arg_idx, sizeof(d_mem), &d_mem);
 		#ifdef ERRMSG
@@ -616,7 +623,7 @@ void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0) throw(st
 		#endif
 	}
 }
-void _clFinish() throw(string){
+void _clFinish(){
 	oclHandles.cl_status = clFinish(oclHandles.queue);	
 	#ifdef ERRMSG
 	oclHandles.error_str = "excpetion in _clFinish";
@@ -642,13 +649,13 @@ void _clFinish() throw(string){
 }
 //--------------------------------------------------------
 //--cambine:enqueue kernel
-void _clInvokeKernel(int kernel_id, int work_items, int work_group_size) throw(string){
+void _clInvokeKernel(int kernel_id, int work_items, int work_group_size){
 	cl_uint work_dim = WORK_DIM;
 	cl_event e[1];
 	if(work_items%work_group_size != 0)	//process situations that work_items cannot be divided by work_group_size
 	  work_items = work_items + (work_group_size-(work_items%work_group_size));
-  	size_t local_work_size[] = {work_group_size, 1};
-	size_t global_work_size[] = {work_items, 1};
+  	size_t local_work_size[] = {(size_t)work_group_size, 1};
+	size_t global_work_size[] = {(size_t)work_items, 1};
 	oclHandles.cl_status = clEnqueueNDRangeKernel(oclHandles.queue, oclHandles.kernel[kernel_id], work_dim, 0, \
 											global_work_size, local_work_size, 0 , 0, &(e[0]) );	
 	#ifdef ERRMSG
@@ -711,10 +718,10 @@ void _clInvokeKernel(int kernel_id, int work_items, int work_group_size) throw(s
         //     throw(string("excpetion in _clEnqueueNDRange() -> clWaitForEvents"));
 	// #endif
 }
-void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int group_y) throw(string){
+void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int group_y){
 	cl_uint work_dim = WORK_DIM;
-	size_t local_work_size[] = {group_x, group_y};
-	size_t global_work_size[] = {range_x, range_y};
+	size_t local_work_size[] = {(size_t)group_x, (size_t)group_y};
+	size_t global_work_size[] = {(size_t)range_x, (size_t)range_y};
 	cl_event e[1];
 	/*if(work_items%work_group_size != 0)	//process situations that work_items cannot be divided by work_group_size
 	  work_items = work_items + (work_group_size-(work_items%work_group_size));*/
@@ -787,7 +794,7 @@ void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int
 
 //--------------------------------------------------------
 //release OpenCL objects
-void _clFree(cl_mem ob) throw(string){
+void _clFree(cl_mem ob){
 	if(ob!=NULL)
 		oclHandles.cl_status = clReleaseMemObject(ob);	
 	#ifdef ERRMSG

@@ -86,7 +86,7 @@ extern double wtime(void);
 
 /*---< usage() >------------------------------------------------------------*/
 void usage(char *argv0) {
-    char *help =
+    const char *help =
         "\nUsage: %s [switches] -i filename\n\n"
 		"    -i filename      :file containing data to be clustered\n"		
 		"    -m max_nclusters :maximum number of clusters allowed    [default=5]\n"
@@ -102,8 +102,6 @@ void usage(char *argv0) {
 
 /*---< main() >-------------------------------------------------------------*/
 int setup(int argc, char **argv) {
-		int		opt;
- extern char   *optarg;
 		char   *filename = 0;
 		float  *buf;
 		char	line[1024];
@@ -129,30 +127,49 @@ int setup(int argc, char **argv) {
 		//float	cluster_timing, io_timing;		
 
 		/* obtain command line arguments and change appropriate options */
-		while ( (opt=getopt(argc,argv,"i:t:m:n:l:bro"))!= EOF) {
-        switch (opt) {
-            case 'i': filename=optarg;
-                      break;
-            case 'b': isBinaryFile = 1;
-                      break;            
-            case 't': threshold=atof(optarg);
-                      break;
-            case 'm': max_nclusters = atoi(optarg);
-                      break;
-            case 'n': min_nclusters = atoi(optarg);
-                      break;
-			case 'r': isRMSE = 1;
-                      break;
-			case 'o': isOutput = 1;
-					  break;
-		    case 'l': nloops = atoi(optarg);
-					  break;
-            case '?': usage(argv[0]);
-                      break;
-            default: usage(argv[0]);
-                      break;
-        }
-    }
+		for (int argi = 1; argi < argc; ++argi) {
+			const char *arg = argv[argi];
+			if (arg[0] != '-') {
+				continue;
+			}
+			switch (arg[1]) {
+				case 'i':
+					if (argi + 1 >= argc) usage(argv[0]);
+					filename = argv[++argi];
+					break;
+				case 'b':
+					isBinaryFile = 1;
+					break;
+				case 't':
+					if (argi + 1 >= argc) usage(argv[0]);
+					threshold = atof(argv[++argi]);
+					break;
+				case 'm':
+					if (argi + 1 >= argc) usage(argv[0]);
+					max_nclusters = atoi(argv[++argi]);
+					break;
+				case 'n':
+					if (argi + 1 >= argc) usage(argv[0]);
+					min_nclusters = atoi(argv[++argi]);
+					break;
+				case 'r':
+					isRMSE = 1;
+					break;
+				case 'o':
+					isOutput = 1;
+					break;
+				case 'l':
+					if (argi + 1 >= argc) usage(argv[0]);
+					nloops = atoi(argv[++argi]);
+					break;
+				case 'h':
+					usage(argv[0]);
+					break;
+				default:
+					usage(argv[0]);
+					break;
+			}
+		}
 
     if (filename == 0) usage(argv[0]);
 		
@@ -165,8 +182,16 @@ int setup(int argc, char **argv) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
             exit(1);
         }
-        read(infile, &npoints,   sizeof(int));
-        read(infile, &nfeatures, sizeof(int));        
+        if (read(infile, &npoints,   sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "Error reading npoints from %s\n", filename);
+            close(infile);
+            exit(1);
+        }
+        if (read(infile, &nfeatures, sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "Error reading nfeatures from %s\n", filename);
+            close(infile);
+            exit(1);
+        }
 
         /* allocate space for features[][] and read attributes of all objects */
         buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
@@ -175,7 +200,13 @@ int setup(int argc, char **argv) {
         for (i=1; i<npoints; i++)
             features[i] = features[i-1] + nfeatures;
 
-        read(infile, buf, npoints*nfeatures*sizeof(float));
+        if (read(infile, buf, npoints*nfeatures*sizeof(float)) !=
+            (ssize_t)(npoints*nfeatures*sizeof(float))) {
+            fprintf(stderr, "Error reading feature data from %s\n", filename);
+            free(buf);
+            close(infile);
+            exit(1);
+        }
 
         close(infile);
     }
@@ -303,4 +334,3 @@ int setup(int argc, char **argv) {
 	free(features);    
     return(0);
 }
-

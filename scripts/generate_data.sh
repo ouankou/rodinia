@@ -113,6 +113,28 @@ if [[ -n "${gitignore_backup}" ]]; then
   cp "${gitignore_backup}" "${DATA_DIR}/.gitignore"
 fi
 
+apply_text_fix() {
+  local file="$1"
+  local from="$2"
+  local to="$3"
+  local tmp_file=""
+
+  if [[ ! -f "${file}" ]]; then
+    return 0
+  fi
+
+  tmp_file="$(mktemp)"
+  sed "s/${from}/${to}/g" "${file}" > "${tmp_file}"
+  mv "${tmp_file}" "${file}"
+}
+
+apply_text_fix "${DATA_DIR}/hotspot/inputGen/hotspotver.cpp" "Univeristy" "University"
+apply_text_fix "${DATA_DIR}/hotspot/inputGen/hotspotex.cpp" "Univeristy" "University"
+apply_text_fix "${DATA_DIR}/hotspot/inputGen/README" "prexisting" "preexisting"
+apply_text_fix "${DATA_DIR}/bfs/inputGen/graphgen.cpp" "Univeristy" "University"
+apply_text_fix "${DATA_DIR}/bfs/inputGen/graphgen.cpp" "are there may be" "and there may be"
+apply_text_fix "${DATA_DIR}/bfs/inputGen/graphgen.cpp" "Parse command lined" "Parse command line"
+
 touch "${DATA_DIR}/.downloaded"
 
 echo "Rodinia data downloaded into ${DATA_DIR}"

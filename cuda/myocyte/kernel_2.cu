@@ -45,9 +45,9 @@ __device__ void kernel_2(	int timeinst,
 	valu_offset_SL = 61;
 	valu_offset_Cyt = 76;
 
-	params_offset_Dyad = 0;
-	params_offset_SL = 5;
-	params_offset_Cyt = 10;
+	params_offset_Dyad = 1;
+	params_offset_SL = 6;
+	params_offset_Cyt = 11;
 
 	com_offset_Dyad = 0;
 	com_offset_SL = 1;

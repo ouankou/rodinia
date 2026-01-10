@@ -184,9 +184,11 @@ int work_2(	int xmax,
 		pointer = i*PARAMETERS;
 		read("../../data/myocyte/params.txt",
 					&params[pointer],
-					18,
+					PARAMETERS - 2,
 					1,
 					0);
+		params[pointer + 16] = (fp)135;
+		params[pointer + 17] = (fp)1;
 	}
 	cudaMemcpy(d_params, params, params_mem, cudaMemcpyHostToDevice);
 

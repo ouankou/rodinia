@@ -5,7 +5,11 @@
 #include "CL_helper.h"
 
 #ifndef DEVICE
-#define DEVICE CL_DEVICE_TYPE_DEFAULT
+#ifdef RODINIA_OPENCL_FORCE_CPU
+#define DEVICE CL_DEVICE_TYPE_CPU
+#else
+#define DEVICE CL_DEVICE_TYPE_GPU
+#endif
 #endif
 
 #define TOL      (0.001)
@@ -97,7 +101,7 @@ int main(int argc, char** argv)
   size_t local[2];
   memcpy(tempCopy,tIn, size * sizeof(float));
 
-  cl_device_id     device_id;     
+  cl_device_id     device_id = NULL;     
   cl_context       context;       
   cl_command_queue commands;      
   cl_program       program;       
@@ -148,7 +152,8 @@ int main(int argc, char** argv)
       return EXIT_FAILURE;
     }
 
-  commands = clCreateCommandQueue(context, device_id, 0, &err);
+  const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+  commands = clCreateCommandQueueWithProperties(context, device_id, queue_props, &err);
   if (!commands)
     {
       printf("Error: Failed to create a command commands!\n%s\n", err_code(err));

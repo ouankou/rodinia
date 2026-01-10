@@ -63,31 +63,41 @@ cl_context CreateContext()
     // get number of platforms
     clGetPlatformIDs (0, NULL, &platformIdCount);
 
+    if (platformIdCount == 0)
+    {
+        std::cerr << "No OpenCL platforms found." << std::endl;
+        return NULL;
+    }
+
     std::vector<cl_platform_id> platformIds(platformIdCount);
-    clGetPlatformIDs (platformIdCount, platformIds.data(), NULL);
-	
-	// In this example, first platform is a CPU, the second one is a GPU. we just choose the first available device.  
-    cl_context_properties contextProperties[] =
+    clGetPlatformIDs(platformIdCount, platformIds.data(), NULL);
+
+    cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+        CL_DEVICE_TYPE_CPU;
+#else
+        CL_DEVICE_TYPE_GPU;
+#endif
+
+    for (cl_uint i = 0; i < platformIdCount; ++i)
     {
-        CL_CONTEXT_PLATFORM,
-        (cl_context_properties)platformIds[1],
-        0
-    };
-    context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_GPU,
-                                      NULL, NULL, &errNum);
-    if (errNum != CL_SUCCESS)
-    {
-        std::cout << "Could not create GPU context, trying CPU..." << std::endl;
-        context = clCreateContextFromType(contextProperties, CL_DEVICE_TYPE_CPU,
-                                          NULL, NULL, &errNum);
-        if (errNum != CL_SUCCESS)
+        cl_context_properties contextProperties[] =
         {
-            std::cerr << "Failed to create an OpenCL GPU or CPU context." << std::endl;
-            return NULL;
+            CL_CONTEXT_PLATFORM,
+            (cl_context_properties)platformIds[i],
+            0
+        };
+        context = clCreateContextFromType(contextProperties, device_type,
+                                          NULL, NULL, &errNum);
+        if (context != NULL && errNum == CL_SUCCESS)
+        {
+            return context;
         }
     }
-    
-    return context;
+
+    const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+    std::cerr << "Failed to create an OpenCL " << device_label << " context." << std::endl;
+    return NULL;
 
 }
 
@@ -125,7 +135,8 @@ cl_command_queue CreateCommandQueue(cl_context context, cl_device_id *cldevice)
         return NULL;
     }
 
-    commandQueue = clCreateCommandQueue(context, cldevices[0], 0, NULL);
+    const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+    commandQueue = clCreateCommandQueueWithProperties(context, cldevices[0], queue_props, NULL);
     if (commandQueue == NULL)
     {
         delete [] cldevices;
@@ -211,28 +222,37 @@ void Cleanup(cl_context context, cl_command_queue commandQueue,
 int getImg(char * srcFilename, unsigned char *srcImg, int inputSize)
 {
     // printf("Loading ipnput: %s\n", srcFilename);
-    char path[] = "../../data/dwt2d/";
+    const char path[] = "../../data/dwt2d/";
     char *newSrc = NULL;
-    
-    if((newSrc = (char *)malloc(strlen(srcFilename)+strlen(path)+1)) != NULL)
+    const char *resolved = srcFilename;
+
+    if (strchr(srcFilename, '/') == NULL)
     {
-        newSrc[0] = '\0';
-        strcat(newSrc, path);
-        strcat(newSrc, srcFilename);
-        srcFilename= newSrc;
+        newSrc = (char *)malloc(strlen(srcFilename) + strlen(path) + 1);
+        if (newSrc != NULL)
+        {
+            newSrc[0] = '\0';
+            strcat(newSrc, path);
+            strcat(newSrc, srcFilename);
+            resolved = newSrc;
+        }
     }
-    printf("Loading ipnput: %s\n", srcFilename);
+    printf("Loading ipnput: %s\n", resolved);
 
     //read image
-    int i = open(srcFilename, O_RDONLY, 0644);
+    int i = open(resolved, O_RDONLY, 0644);
     if (i == -1) 
 	{ 
-        error(0,errno,"cannot access %s", srcFilename);
+        error(0,errno,"cannot access %s", resolved);
+        if (newSrc)
+            free(newSrc);
         return -1;
     }
     int ret = read(i, srcImg, inputSize);
     printf("precteno %d, inputsize %d\n", ret, inputSize);
     close(i);
+    if (newSrc)
+        free(newSrc);
 
     return 0;
 }
@@ -336,8 +356,8 @@ void rgbToComponents(cl_mem d_r, cl_mem d_g, cl_mem d_b, unsigned char * h_src, 
 	cl_d_src = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, pixels*3, h_src, &errNum);
 	// fatal_CL(errNum, __LINE__);
 
-	size_t globalWorkSize[1] = { alignedSize/3};
-    size_t localWorkSize[1] = { THREADS };
+	size_t globalWorkSize[1] = { (size_t)(alignedSize / 3) };
+    size_t localWorkSize[1] = { (size_t)THREADS };
 
 	errNum  = clSetKernelArg(c_CopySrcToComponents, 0, sizeof(cl_mem), &d_r);
 	errNum |= clSetKernelArg(c_CopySrcToComponents, 1, sizeof(cl_mem), &d_g);
@@ -368,8 +388,8 @@ void bwToComponent(cl_mem d_c, unsigned char * h_src, int width, int height)
 	cl_d_src = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, pixels, h_src, NULL);
 	// fatal_CL(errNum, __LINE__);
 	
-	size_t globalWorkSize[1] = { alignedSize/9};
-    size_t localWorkSize[1] = { THREADS };
+	size_t globalWorkSize[1] = { (size_t)(alignedSize / 9) };
+    size_t localWorkSize[1] = { (size_t)THREADS };
 	assert(alignedSize%(THREADS*3) == 0);
 	
 	errNum  = clSetKernelArg(c_CopySrcToComponent, 0, sizeof(cl_mem), &d_c);
@@ -412,8 +432,8 @@ void launchFDWT53Kernel (int WIN_SX, int WIN_SY, cl_mem in, cl_mem out, int sx, 
 	printf("sliding steps = %d , gx = %d , gy = %d \n", steps, gx, gy);
 	
     // prepare grid size
-	size_t globalWorkSize[2] = { gx*WIN_SX, gy*1};
-    size_t localWorkSize[2]  = { WIN_SX , 1};
+	size_t globalWorkSize[2] = { (size_t)(gx * WIN_SX), (size_t)gy };
+    size_t localWorkSize[2]  = { (size_t)WIN_SX , 1};
     // printf("\n globalx=%d, globaly=%d, blocksize=%d\n", gx, gy, WIN_SX);
 	
 	errNum  = clSetKernelArg(kl_fdwt53Kernel, 0, sizeof(cl_mem), &in);
@@ -549,9 +569,8 @@ int writeLinear(cl_mem component, int pixWidth, int pixHeight, const char * file
 	samplesToChar(result, gpu_output, samplesNum);
 	
 	// Write component 
-	char outfile[strlen(filename)+strlen(suffix)];
-    strcpy(outfile, filename);
-    strcpy(outfile+strlen(filename), suffix);
+	char outfile[strlen(filename) + strlen(suffix) + 1];
+    snprintf(outfile, sizeof(outfile), "%s%s", filename, suffix);
     i = open(outfile, O_CREAT|O_WRONLY, 0644);
 	if (i == -1) 
 	{ 
@@ -559,7 +578,13 @@ int writeLinear(cl_mem component, int pixWidth, int pixHeight, const char * file
         return -1;
     }
 	printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
-    write(i, result, samplesNum);
+    if (write(i, result, samplesNum) != samplesNum) {
+        error(0, errno, "short write to %s", outfile);
+        close(i);
+        free(gpu_output);
+        free(result);
+        return -1;
+    }
     close(i);
 	
 	// Clean up 
@@ -687,9 +712,8 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
     // Write component
 	samplesToChar(result, dst, samplesNum);	
 	
-	char outfile[strlen(filename)+strlen(suffix)];
-    strcpy(outfile, filename);
-    strcpy(outfile+strlen(filename), suffix);
+	char outfile[strlen(filename) + strlen(suffix) + 1];
+    snprintf(outfile, sizeof(outfile), "%s%s", filename, suffix);
     i = open(outfile, O_CREAT|O_WRONLY, 0644);
 	
     if (i == -1) 
@@ -699,7 +723,15 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
     }
 	
     printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
-    write(i, result, samplesNum);
+    if (write(i, result, samplesNum) != samplesNum) {
+        error(0, errno, "short write to %s", outfile);
+        close(i);
+        free(result);
+        free(src);
+        free(dst);
+        free(bandDims);
+        return -1;
+    }
     close(i);
 	
 	free(src);
@@ -908,10 +940,10 @@ int main(int argc, char **argv)
             return -1;
         }
     }
-	argc -= optind;
-	argv += optind;
+	int remaining = argc - optind;
+	int first_arg = optind;
 
-    if (argc == 0) 
+    if (remaining == 0) 
 	{ // at least one filename is expected
         printf("Please supply src file name\n");
         usage();
@@ -989,15 +1021,15 @@ int main(int argc, char **argv)
     d->dwtLvls  = dwtLvls;
 	
 	// file names
-    d->srcFilename = (char *)malloc(strlen(argv[0]));
-    strcpy(d->srcFilename, argv[0]);
-    if (argc == 1) 
+    d->srcFilename = (char *)malloc(strlen(argv[first_arg]) + 1);
+    strcpy(d->srcFilename, argv[first_arg]);
+    if (remaining == 1) 
 	{ // only one filename supplyed
-        d->outFilename = (char *)malloc(strlen(d->srcFilename)+4);
+        d->outFilename = (char *)malloc(strlen(d->srcFilename) + 5);
         strcpy(d->outFilename, d->srcFilename);
         strcpy(d->outFilename+strlen(d->srcFilename), ".dwt");
     } else {
-        d->outFilename = strdup(argv[1]);
+        d->outFilename = strdup(argv[first_arg + 1]);
     }
 
     //Input review

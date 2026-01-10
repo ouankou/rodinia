@@ -452,7 +452,7 @@ kernel_ecc(	fp timeinst,
 	//=====================================================================
 
 	// input parameters
-	cycleLength = d_params[15];
+	cycleLength = d_params[0];
 
 	// variable references
 	offset_1 = valu_offset;
@@ -1298,7 +1298,7 @@ kernel_cam(	fp timeinst,
 	d_finavalu[offset_15] = dCa4CaMCa4CaN;
 
 	// write to global variables for adjusting Ca buffering in EC coupling model
-	d_finavalu[com_offset] = 1e-3*(2*CaMKIItot*(rcnCKtt2-rcnCKb2b) - 2*(rcn02+rcn24+rcn02B+rcn24B+rcnCa4CaN+rcn02CaN+rcn24CaN)); // [uM/msec]
+	d_com[com_offset] = 1e-3*(2*CaMKIItot*(rcnCKtt2-rcnCKb2b) - 2*(rcn02+rcn24+rcn02B+rcn24B+rcnCa4CaN+rcn02CaN+rcn24CaN)); // [uM/msec]
 	//d_finavalu[JCa] = 1; // [uM/msec]
 
 }
@@ -1308,7 +1308,7 @@ kernel_cam(	fp timeinst,
 //========================================================================================================================================================================================================200
 
 __kernel void 
-kernel_gpu_opencl(	int timeinst,
+kernel_gpu_opencl(	fp timeinst,
 					__global fp *d_initvalu,
 					__global fp *d_finavalu,
 					__global fp *d_params,
@@ -1376,7 +1376,7 @@ kernel_gpu_opencl(	int timeinst,
 
 			// specific
 			valu_offset = 46;
-			params_offset = 0;
+			params_offset = 1;
 			com_offset = 0;
 			CaDyad = d_initvalu[35]*1e3;												// from ECC model, *** Converting from [mM] to [uM] ***
 			// cam function for Dyad
@@ -1392,7 +1392,7 @@ kernel_gpu_opencl(	int timeinst,
 
 			// specific
 			valu_offset = 61;
-			params_offset = 5;
+			params_offset = 6;
 			com_offset = 1;
 			CaSL = d_initvalu[36]*1e3;													// from ECC model, *** Converting from [mM] to [uM] ***
 			// cam function for Dyad
@@ -1408,7 +1408,7 @@ kernel_gpu_opencl(	int timeinst,
 
 			// specific
 			valu_offset = 76;
-			params_offset = 10;
+			params_offset = 11;
 			com_offset = 2;
 			CaCyt = d_initvalu[37]*1e3;										// from ECC model, *** Converting from [mM] to [uM] ***
 			// cam function for Dyad

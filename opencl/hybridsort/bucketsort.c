@@ -84,15 +84,39 @@ double sum = 0;
 ////////////////////////////////////////////////////////////////////////////////
 void init_bucketsort(int listsize)
 {
-    cl_uint num = 0;
-    clGetPlatformIDs(0, NULL, &num);
-    cl_platform_id platformID[num];
-    clGetPlatformIDs(num, platformID, NULL);
-    
-    clGetDeviceIDs(platformID[1],CL_DEVICE_TYPE_GPU,0,NULL,&num);
-    
-    cl_device_id devices[num];
-    err = clGetDeviceIDs(platformID[1],CL_DEVICE_TYPE_GPU,num,devices,NULL);
+    cl_uint platform_count = 0;
+    cl_uint device_count = 0;
+    cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+        CL_DEVICE_TYPE_CPU;
+#else
+        CL_DEVICE_TYPE_GPU;
+#endif
+    clGetPlatformIDs(0, NULL, &platform_count);
+    if (platform_count == 0) {
+        printf("Error: No OpenCL platforms found!\n");
+        exit(1);
+    }
+
+    cl_platform_id platformID[platform_count];
+    clGetPlatformIDs(platform_count, platformID, NULL);
+
+    cl_platform_id platform = platformID[0];
+    for (cl_uint i = 0; i < platform_count; ++i) {
+        if (clGetDeviceIDs(platformID[i], device_type, 0, NULL, &device_count) == CL_SUCCESS &&
+            device_count > 0) {
+            platform = platformID[i];
+            break;
+        }
+    }
+    if (device_count == 0) {
+        const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+        printf("Error: required OpenCL %s device not available!\n", device_label);
+        exit(1);
+    }
+
+    cl_device_id devices[device_count];
+    err = clGetDeviceIDs(platform, device_type, device_count, devices, NULL);
 //    int gpu = 1;
 //    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 2, &device_id, NULL);
     
@@ -109,7 +133,11 @@ void init_bucketsort(int listsize)
     
     bucketContext = clCreateContext(0, 1, &devices[0], NULL, NULL, &err);
 
-    bucketCommands = clCreateCommandQueue(bucketContext, devices[0], CL_QUEUE_PROFILING_ENABLE, &err);
+    const cl_queue_properties queue_props_prof[] = {
+        CL_QUEUE_PROPERTIES, (cl_queue_properties)CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    bucketCommands = clCreateCommandQueueWithProperties(bucketContext, devices[0],
+                                                        queue_props_prof, &err);
     
 	h_offsets = (unsigned int *) malloc(DIVISIONS * sizeof(unsigned int));
     for(int i = 0; i < DIVISIONS; i++){
@@ -148,7 +176,7 @@ void init_bucketsort(int listsize)
 	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
 	fclose(fp);
     
-    bucketProgram = clCreateProgramWithSource(bucketContext, 1, (const char **) &source_str, (const size_t)&source_size, &err);
+    bucketProgram = clCreateProgramWithSource(bucketContext, 1, (const char **) &source_str, &source_size, &err);
     if (!bucketProgram)
     {
         printf("Error: Failed to create bucket compute program!\n");
@@ -194,20 +222,44 @@ void finish_bucketsort()
 }
 
 void histogramInit(int listsize) {
-    cl_uint num = 0;
-    clGetPlatformIDs(0, NULL, &num);
-    cl_platform_id platformID[num];
-    clGetPlatformIDs(num, platformID, NULL);
-    
-    clGetDeviceIDs(platformID[1],CL_DEVICE_TYPE_GPU,0,NULL,&num);
-    
+    cl_uint platform_count = 0;
+    cl_uint device_count = 0;
+    cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+        CL_DEVICE_TYPE_CPU;
+#else
+        CL_DEVICE_TYPE_GPU;
+#endif
+    clGetPlatformIDs(0, NULL, &platform_count);
+    if (platform_count == 0) {
+        printf("Error: No OpenCL platforms found!\n");
+        exit(1);
+    }
+
+    cl_platform_id platformID[platform_count];
+    clGetPlatformIDs(platform_count, platformID, NULL);
+
+    cl_platform_id platform = platformID[0];
+    for (cl_uint i = 0; i < platform_count; ++i) {
+        if (clGetDeviceIDs(platformID[i], device_type, 0, NULL, &device_count) == CL_SUCCESS &&
+            device_count > 0) {
+            platform = platformID[i];
+            break;
+        }
+    }
+    if (device_count == 0) {
+        const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+        printf("Error: required OpenCL %s device not available!\n", device_label);
+        exit(1);
+    }
+
     char name[128];
-    
-    clGetPlatformInfo(platformID[1], CL_PLATFORM_PROFILE,128,name,NULL);
-    
-    
-    cl_device_id devices[num];
-    err = clGetDeviceIDs(platformID[1],CL_DEVICE_TYPE_GPU,num,devices,NULL);
+
+    clGetPlatformInfo(platform, CL_PLATFORM_PROFILE,128,name,NULL);
+
+
+    cl_device_id devices[device_count];
+    err = clGetDeviceIDs(platform, device_type, device_count, devices, NULL);
     //    int gpu = 1;
     //    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 2, &device_id, NULL);
     
@@ -224,13 +276,17 @@ void histogramInit(int listsize) {
     cl_context_properties contextProperties[] =
     {
         CL_CONTEXT_PLATFORM,
-        (cl_context_properties)platformID[num],
+        (cl_context_properties)platform,
         0
     };
     
     histoContext = clCreateContext(contextProperties, 1, &devices[0], NULL, NULL, &err);
     
-    histoCommands = clCreateCommandQueue(histoContext, devices[0], CL_QUEUE_PROFILING_ENABLE, &err);
+    const cl_queue_properties histo_queue_props_prof[] = {
+        CL_QUEUE_PROPERTIES, (cl_queue_properties)CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    histoCommands = clCreateCommandQueueWithProperties(histoContext, devices[0],
+                                                       histo_queue_props_prof, &err);
     histoInput = clCreateBuffer(histoContext,  CL_MEM_READ_ONLY,  listsize*(sizeof(float)), NULL, NULL);
     histoOutput = clCreateBuffer(histoContext, CL_MEM_READ_WRITE, 1024 * sizeof(unsigned int), NULL, NULL);
     FILE *fp;
@@ -249,7 +305,7 @@ void histogramInit(int listsize) {
 	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
 	fclose(fp);
     
-    histoProgram = clCreateProgramWithSource(histoContext, 1, (const char **) &source_str, (const size_t)&source_size, &err);
+    histoProgram = clCreateProgramWithSource(histoContext, 1, (const char **) &source_str, &source_size, &err);
     if (!histoProgram)
     {
         printf("Error: Failed to create compute program!\n");

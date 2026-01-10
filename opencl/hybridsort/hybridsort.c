@@ -113,11 +113,20 @@ int main(int argc, char** argv)
     else {
         FILE *fp;
         fp = fopen(argv[1],"r");
+        if (!fp) {
+            fprintf(stderr, "Failed to open input file %s\n", argv[1]);
+            return -1;
+        }
         for(int i = 0; i < numElements; i++) {
-            fscanf(fp,"%f",&cpu_idata[i]);
+            if (fscanf(fp,"%f",&cpu_idata[i]) != 1) {
+                fprintf(stderr, "Failed to read input element %d from %s\n", i, argv[1]);
+                fclose(fp);
+                return -1;
+            }
             datamin = fminf(cpu_idata[i], datamin);
             datamax = fmaxf(cpu_idata[i],datamax);
         }
+        fclose(fp);
 	}
     FILE *tp;
     const char filename2[]="./hybridinput.txt";
@@ -207,6 +216,5 @@ int main(int argc, char** argv)
 //    printf("%d \n", summy);
     return 0;
 }
-
 
 

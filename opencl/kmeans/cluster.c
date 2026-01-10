@@ -108,7 +108,11 @@ int cluster(int      npoints,				/* number of data points */
 		if (nclusters > npoints) break;	/* cannot have more clusters than points */
 
 		/* allocate device memory, invert data array (@ kmeans_cuda.cu) */
-		allocate(npoints, nfeatures, nclusters, features);
+		if (allocate(npoints, nfeatures, nclusters, features) != 0) {
+			fprintf(stderr, "ERROR: OpenCL initialization failed\n");
+			free(membership);
+			exit(1);
+		}
 
 		/* iterate nloops times for each number of clusters */
 		for(i = 0; i < nloops; i++)
@@ -153,4 +157,3 @@ int cluster(int      npoints,				/* number of data points */
 
     return index;
 }
-

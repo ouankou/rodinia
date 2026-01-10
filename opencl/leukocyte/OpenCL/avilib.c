@@ -888,7 +888,7 @@ static int avi_write_data(avi_t *AVI, char *data, unsigned long length, int audi
 {
    int n;
 
-   unsigned char astr[5];
+   unsigned char astr[16];
 
    /* Check for maximum file length */
    
@@ -900,7 +900,7 @@ static int avi_write_data(avi_t *AVI, char *data, unsigned long length, int audi
    /* Add index entry */
 
    //set tag for current audio track
-   sprintf((char *)astr, "0%1dwb", AVI->aptr+1);
+   snprintf((char *)astr, sizeof(astr), "0%02dwb", AVI->aptr + 1);
 
    if(audio)
      n = avi_add_index_entry(AVI,astr,0x00,AVI->pos,length);

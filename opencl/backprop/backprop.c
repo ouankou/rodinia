@@ -435,9 +435,18 @@ BPNN *bpnn_read(char *filename)
 
   printf("Reading '%s'\n", filename);  //fflush(stdout);
 
-  read(fd, (char *) &n1, sizeof(int));
-  read(fd, (char *) &n2, sizeof(int));
-  read(fd, (char *) &n3, sizeof(int));
+  if (read(fd, (char *) &n1, sizeof(int)) != sizeof(int)) {
+    close(fd);
+    return NULL;
+  }
+  if (read(fd, (char *) &n2, sizeof(int)) != sizeof(int)) {
+    close(fd);
+    return NULL;
+  }
+  if (read(fd, (char *) &n3, sizeof(int)) != sizeof(int)) {
+    close(fd);
+    return NULL;
+  }
   new_t = bpnn_internal_create(n1, n2, n3);
 
   printf("'%s' contains a %dx%dx%d network\n", filename, n1, n2, n3);
@@ -445,7 +454,13 @@ BPNN *bpnn_read(char *filename)
 
   memcnt = 0;
   mem = (char *) malloc ((unsigned) ((n1+1) * (n2+1) * sizeof(float)));
-  read(fd, mem, (n1+1) * (n2+1) * sizeof(float));
+  if (read(fd, mem, (n1+1) * (n2+1) * sizeof(float)) !=
+      (ssize_t)((n1+1) * (n2+1) * sizeof(float))) {
+    free(mem);
+    close(fd);
+    bpnn_free(new_t);
+    return NULL;
+  }
   for (i = 0; i <= n1; i++) {
     for (j = 0; j <= n2; j++) {
       fastcopy(&(new_t->input_weights[i][j]), &mem[memcnt], sizeof(float));
@@ -458,7 +473,13 @@ BPNN *bpnn_read(char *filename)
 
   memcnt = 0;
   mem = (char *) malloc ((unsigned) ((n2+1) * (n3+1) * sizeof(float)));
-  read(fd, mem, (n2+1) * (n3+1) * sizeof(float));
+  if (read(fd, mem, (n2+1) * (n3+1) * sizeof(float)) !=
+      (ssize_t)((n2+1) * (n3+1) * sizeof(float))) {
+    free(mem);
+    close(fd);
+    bpnn_free(new_t);
+    return NULL;
+  }
   for (i = 0; i <= n2; i++) {
     for (j = 0; j <= n3; j++) {
       fastcopy(&(new_t->hidden_weights[i][j]), &mem[memcnt], sizeof(float));

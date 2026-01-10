@@ -40,7 +40,7 @@
 
 
 #if block_length > 128
-#warning "the kernels may fail too launch on some systems if the block length is too large"
+// Some devices may fail to launch kernels with large block sizes.
 #endif
 
 
@@ -115,7 +115,7 @@ void dump(cl_mem variables, int nel, int nelr){
 	delete[] h_variables;
 }
 
-void initialize_variables(int nelr, cl_mem variables, cl_mem ff_variable) throw(string){
+void initialize_variables(int nelr, cl_mem variables, cl_mem ff_variable){
 
 	int work_items = nelr;
 	int work_group_size = BLOCK_SIZE_1;

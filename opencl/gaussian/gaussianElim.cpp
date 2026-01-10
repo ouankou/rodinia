@@ -88,10 +88,18 @@ int main(int argc, char *argv[]) {
 
     context = cl_init_context(platform,device,quiet);
     
-    if(size < 1)
+	if(size < 1)
       {
 	fp = fopen(filename, "r");
-	fscanf(fp, "%d", &size);
+	if (!fp) {
+		fprintf(stderr, "Error: unable to open %s\n", filename);
+		return 1;
+	}
+	if (fscanf(fp, "%d", &size) != 1) {
+		fprintf(stderr, "Error: failed to read matrix size from %s\n", filename);
+		fclose(fp);
+		return 1;
+	}
     
 	a = (float *) malloc(size * size * sizeof(float));
 	InitMat(fp,size, a, size, size);
@@ -502,7 +510,10 @@ void InitMat(FILE *fp, int size, float *ary, int nrow, int ncol)
 	
 	for (i=0; i<nrow; i++) {
 		for (j=0; j<ncol; j++) {
-			fscanf(fp, "%f",  ary+size*i+j);
+			if (fscanf(fp, "%f",  ary+size*i+j) != 1) {
+				fprintf(stderr, "Error: failed to read matrix data\n");
+				exit(1);
+			}
 		}
 	}  
 }
@@ -516,7 +527,10 @@ void InitAry(FILE *fp, float *ary, int ary_size)
 	int i;
 	
 	for (i=0; i<ary_size; i++) {
-		fscanf(fp, "%f",  &ary[i]);
+		if (fscanf(fp, "%f",  &ary[i]) != 1) {
+			fprintf(stderr, "Error: failed to read vector data\n");
+			exit(1);
+		}
 	}
 }  
 /*------------------------------------------------------
@@ -549,4 +563,3 @@ void PrintAry(float *ary, int ary_size)
 	printf("\n\n");
 }
 #endif
-

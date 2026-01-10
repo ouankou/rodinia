@@ -233,13 +233,13 @@ srad_kernel(fp d_lambda,
 		d_L = (d_dN_loc + d_dS_loc + d_dW_loc + d_dE_loc) / d_Jc;			// laplacian (based on derivatives)
 
 		// ICOV (equ 31/35)
-		d_num  = (0.5*d_G2) - ((1.0/16.0)*(d_L*d_L)) ;						// num (based on gradient and laplacian)
-		d_den  = 1 + (0.25*d_L);												// den (based on laplacian)
+		d_num  = (0.5f*d_G2) - ((1.0f/16.0f)*(d_L*d_L)) ;						// num (based on gradient and laplacian)
+		d_den  = 1.0f + (0.25f*d_L);											// den (based on laplacian)
 		d_qsqr = d_num/(d_den*d_den);										// qsqr (based on num and den)
 	 
 		// diffusion coefficent (equ 33) (every element of IMAGE)
 		d_den = (d_qsqr-d_q0sqr) / (d_q0sqr * (1+d_q0sqr)) ;				// den (based on qsqr and q0sqr)
-		d_c_loc = 1.0 / (1.0+d_den) ;										// diffusion coefficient (based on den)
+		d_c_loc = 1.0f / (1.0f+d_den) ;										// diffusion coefficient (based on den)
 	    
 		// saturate diffusion coefficent to 0-1 range
 		if (d_c_loc < 0){													// if diffusion coefficient < 0
@@ -313,7 +313,7 @@ srad2_kernel(	fp d_lambda,
 		d_D = d_cN*d_dN[ei] + d_cS*d_dS[ei] + d_cW*d_dW[ei] + d_cE*d_dE[ei];// divergence
 
 		// image update (equ 61) (every element of IMAGE)
-		d_I[ei] = d_I[ei] + 0.25*d_lambda*d_D;								// updates image (based on input time step and divergence)
+		d_I[ei] = d_I[ei] + 0.25f*d_lambda*d_D;								// updates image (based on input time step and divergence)
 
 	}
 

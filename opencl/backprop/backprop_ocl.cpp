@@ -48,8 +48,9 @@ static int initialize(int use_gpu)
 	if( result != CL_SUCCESS ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
 
 	// create command queue for the first device
-	cmd_queue = clCreateCommandQueue( context, device_list[0], 0, NULL );
-	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueue() failed\n"); return -1; }
+	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+	cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
+	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueueWithProperties() failed\n"); return -1; }
 	return 0;
 }
 
@@ -104,22 +105,57 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
 	if(!source) { printf("ERROR: calloc(%d) failed\n", sourcesize); return -1; }
 
 	// read the kernel core source
-	char * kernel_bp1  = "bpnn_layerforward_ocl";
-	char * kernel_bp2  = "bpnn_adjust_weights_ocl";
-	char * tempchar = "./backprop_kernel.cl";
+	const char *kernel_bp1  = "bpnn_layerforward_ocl";
+	const char *kernel_bp2  = "bpnn_adjust_weights_ocl";
+	const char *tempchar = "./backprop_kernel.cl";
 	FILE * fp = fopen(tempchar, "rb"); 
-	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); return -1; }
-	fread(source + strlen(source), sourcesize, 1, fp);
+	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); free(source); return -1; }
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	long fsize = ftell(fp);
+	if (fsize < 0) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	if (fsize >= sourcesize) {
+		printf("ERROR: kernel file '%s' is too large\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	rewind(fp);
+	if (fread(source, 1, (size_t)fsize, fp) != (size_t)fsize) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	source[fsize] = '\0';
 	fclose(fp);
 	
-	int use_gpu = 1;
-	if(initialize(use_gpu)) return -1;
+	int use_gpu =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		0;
+#else
+		1;
+#endif
+	if (initialize(use_gpu)) {
+		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+		free(source);
+		return -1;
+	}
 	
 	// compile kernel
 	cl_int err = 0;
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); free(source); return -1; }
 	err = clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
 	{ // show warnings/errors
 		//static char log[65536]; memset(log, 0, sizeof(log));
@@ -128,7 +164,9 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
 		//clGetProgramBuildInfo(prog, device_id, CL_PROGRAM_BUILD_LOG, sizeof(log)-1, log, NULL);
 		//if(err || strstr(log,"warning:") || strstr(log, "error:")) printf("<<<<\n%s\n>>>>\n", log);
 	}
-	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); free(source); return -1; }
+	free(source);
+	source = NULL;
     	
 	cl_kernel kernel1;
 	cl_kernel kernel2;
@@ -141,15 +179,15 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
     float *input_weights_prev_one_dim;
 	float * partial_sum;
 	float sum;
-	float num_blocks = in / BLOCK_SIZE;
+	size_t num_blocks_local = (size_t)((in + BLOCK_SIZE - 1) / BLOCK_SIZE);
 	
 	input_weights_one_dim = (float *) malloc((in + 1)* (hid + 1) * sizeof(float));
 	input_weights_prev_one_dim = (float *) malloc((in + 1)* (hid + 1) * sizeof(float));
-	partial_sum = (float *) malloc(num_blocks * WIDTH * sizeof(float));
+	partial_sum = (float *) malloc(num_blocks_local * WIDTH * sizeof(float));
 	
 	// set global and local workitems
-	size_t global_work[3] = { BLOCK_SIZE, BLOCK_SIZE * num_blocks, 1 }; 
-	size_t local_work[3] = { BLOCK_SIZE, BLOCK_SIZE, 1 };
+	size_t global_work[3] = { (size_t)BLOCK_SIZE, (size_t)BLOCK_SIZE * num_blocks_local, 1 };
+	size_t local_work[3] = { (size_t)BLOCK_SIZE, (size_t)BLOCK_SIZE, 1 };
 	
 	// this preprocessing stage is temporarily added to correct the bug of wrong memcopy using two-dimensional net->inputweights
 	// todo: fix mem allocation
@@ -175,7 +213,7 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer input_hidden_ocl\n"); return -1;}
 	output_hidden_ocl = clCreateBuffer(context, CL_MEM_READ_WRITE, (hid + 1) * sizeof(float), NULL, &err );
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer output_hidden_ocl\n"); return -1;}
-	hidden_partial_sum = clCreateBuffer(context, CL_MEM_READ_WRITE, num_blocks * WIDTH * sizeof(float), NULL, &err );
+	hidden_partial_sum = clCreateBuffer(context, CL_MEM_READ_WRITE, num_blocks_local * WIDTH * sizeof(float), NULL, &err );
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer hidden_partial_sum\n"); return -1;}
 	hidden_delta_ocl = clCreateBuffer(context, CL_MEM_READ_WRITE, (hid + 1) * sizeof(float), NULL, &err );
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateBuffer hidden_delta_ocl\n"); return -1;}
@@ -202,14 +240,14 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
 	err = clEnqueueNDRangeKernel(cmd_queue, kernel1, 2, NULL, global_work, local_work, 0, 0, 0);
 	if(err != CL_SUCCESS) { printf("ERROR: 1  clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }	
   
-	err = clEnqueueReadBuffer(cmd_queue, hidden_partial_sum, 1, 0, num_blocks * WIDTH * sizeof(float), partial_sum, 0, 0, 0);
+	err = clEnqueueReadBuffer(cmd_queue, hidden_partial_sum, 1, 0, num_blocks_local * WIDTH * sizeof(float), partial_sum, 0, 0, 0);
 	if(err != CL_SUCCESS) { printf("ERROR: 1  clEnqueueReadBuffer: partial sum\n"); return -1; }	
   
 	for (int j = 1; j <= hid; j++) {
 		sum = 0.0;
-		for (int k = 0; k < num_blocks; k++) {	
-		sum += partial_sum[k * hid + j-1] ;
-    }
+		for (size_t k = 0; k < num_blocks_local; k++) {
+			sum += partial_sum[k * (size_t)hid + (size_t)(j - 1)];
+		}
 		sum += net->input_weights[0][j];
 		net-> hidden_units[j] = float(1.0 / (1.0 + exp(-sum)));
 	}
@@ -252,4 +290,5 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
 	free(partial_sum);
 	free(input_weights_one_dim);
 
+	return 0;
 }

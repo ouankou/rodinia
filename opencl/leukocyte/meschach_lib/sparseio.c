@@ -30,6 +30,7 @@
 */
 
 #include        <stdio.h>
+#include <unistd.h>
 #include        "sparse.h"
 
 static char rcsid[] = "$Id: sparseio.c,v 1.4 1994/01/13 05:34:25 des Exp $";
@@ -293,7 +294,8 @@ SPMAT  *sp_finput(FILE *fp)
 	{
 	        ret_val = 0;
 		skipjunk(fp);
-		fscanf(fp,"SparseMatrix:");
+		if (fscanf(fp,"SparseMatrix:") == EOF)
+		    error(E_EOF,"sp_finput");
 		skipjunk(fp);
 		if ( (ret_val=fscanf(fp,"%u by %u",&m,&n)) != 2 )
 		    error((ret_val == EOF) ? E_EOF : E_FORMAT,"sp_finput");

@@ -82,8 +82,9 @@ static int initialize(int use_gpu)
 	if( result != CL_SUCCESS ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
 
 	// create command queue for the first device
-	cmd_queue = clCreateCommandQueue( context, device_list[0], 0, NULL );
-	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueue() failed\n"); return -1; }
+	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+	cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
+	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueueWithProperties() failed\n"); return -1; }
 
 	return 0;
 }
@@ -128,33 +129,77 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	if(!source) { printf("ERROR: calloc(%d) failed\n", sourcesize); return -1; }
 
 	// read the kernel core source
-	char * tempchar = "./kmeans.cl";
+	const char *tempchar = "./kmeans.cl";
 	FILE * fp = fopen(tempchar, "rb"); 
-	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); return -1; }
-	fread(source + strlen(source), sourcesize, 1, fp);
+	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); free(source); return -1; }
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	long fsize = ftell(fp);
+	if (fsize < 0) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	if (fsize >= sourcesize) {
+		printf("ERROR: kernel file '%s' is too large\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	rewind(fp);
+	if (fread(source, 1, (size_t)fsize, fp) != (size_t)fsize) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	source[fsize] = '\0';
 	fclose(fp);
 		
 	// OpenCL initialization
-	int use_gpu = 1;
-	if(initialize(use_gpu)) return -1;
+	int use_gpu =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		0;
+#else
+		1;
+#endif
+	if (initialize(use_gpu)) {
+		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+		free(source);
+		return -1;
+	}
 
 	// compile kernel
 	cl_int err = 0;
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); free(source); return -1; }
 	err = clBuildProgram(prog, 0, NULL, NULL, NULL, NULL);
-	{ // show warnings/errors
-	//	static char log[65536]; memset(log, 0, sizeof(log));
-	//	cl_device_id device_id = 0;
-	//	err = clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(device_id), &device_id, NULL);
-	//	clGetProgramBuildInfo(prog, device_id, CL_PROGRAM_BUILD_LOG, sizeof(log)-1, log, NULL);
-	//	if(err || strstr(log,"warning:") || strstr(log, "error:")) printf("<<<<\n%s\n>>>>\n", log);
+	if(err != CL_SUCCESS) {
+		size_t log_size = 0;
+		clGetProgramBuildInfo(prog, device_list[0], CL_PROGRAM_BUILD_LOG, 0, NULL, &log_size);
+		if (log_size > 1) {
+			char *log = (char *)malloc(log_size);
+			if (log) {
+				clGetProgramBuildInfo(prog, device_list[0], CL_PROGRAM_BUILD_LOG, log_size, log, NULL);
+				printf("Build log:\n%s\n", log);
+				free(log);
+			}
+		}
+		printf("ERROR: clBuildProgram() => %d\n", err);
+		free(source);
+		return -1;
 	}
-	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); return -1; }
+	free(source);
+	source = NULL;
 	
-	char * kernel_kmeans_c  = "kmeans_kernel_c";
-	char * kernel_swap  = "kmeans_swap";	
+	const char *kernel_kmeans_c  = "kmeans_kernel_c";
+	const char *kernel_swap  = "kmeans_swap";	
 		
 	kernel_s = clCreateKernel(prog, kernel_kmeans_c, &err);  
 	if(err != CL_SUCCESS) { printf("ERROR: clCreateKernel() 0 => %d\n", err); return -1; }
@@ -181,7 +226,7 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	clSetKernelArg(kernel2, 2, sizeof(cl_int), (void*) &n_points);
 	clSetKernelArg(kernel2, 3, sizeof(cl_int), (void*) &n_features);
 	
-	size_t global_work[3] = { n_points, 1, 1 };
+	size_t global_work[3] = { (size_t)n_points, 1, 1 };
 	/// Ke Wang adjustable local group size 2013/08/07 10:37:33
 	size_t local_work_size= BLOCK_SIZE; // work group size is defined by RD_WG_SIZE_0 or RD_WG_SIZE_0_0 2014/06/10 17:00:51
 	if(global_work[0]%local_work_size !=0)
@@ -191,6 +236,11 @@ int allocate(int n_points, int n_features, int n_clusters, float **feature)
 	if(err != CL_SUCCESS) { printf("ERROR: clEnqueueNDRangeKernel()=>%d failed\n", err); return -1; }
 	
 	membership_OCL = (int*) malloc(n_points * sizeof(int));
+	if (!membership_OCL) {
+		printf("ERROR: malloc membership_OCL failed\n");
+		return -1;
+	}
+	return 0;
 }
 
 void deallocateMemory()
@@ -226,7 +276,7 @@ int	kmeansOCL(float **feature,    /* in: [npoints][nfeatures] */
 	int i, j, k;
 	cl_int err = 0;
 	
-	size_t global_work[3] = { n_points, 1, 1 }; 
+	size_t global_work[3] = { (size_t)n_points, 1, 1 }; 
 
 	/// Ke Wang adjustable local group size 2013/08/07 10:37:33
 	size_t local_work_size=BLOCK_SIZE2; // work group size is defined by RD_WG_SIZE_1 or RD_WG_SIZE_1_0 2014/06/10 17:00:41

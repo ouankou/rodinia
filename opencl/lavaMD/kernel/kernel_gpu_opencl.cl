@@ -100,6 +100,9 @@ __kernel void kernel_gpu_opencl(	par_str d_par_gpu,
 	int bx = get_group_id(0);															// get current horizontal block index (0-n)
 	int tx = get_local_id(0);															// get current horizontal thread index (0-n)
 	int wtx = tx;
+	__local FOUR_VECTOR rA_shared[NUMBER_PAR_PER_BOX];
+	__local FOUR_VECTOR rB_shared[NUMBER_PAR_PER_BOX];
+	__local fp qB_shared[NUMBER_PAR_PER_BOX];
 
 	//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------180
 	//	DO FOR THE NUMBER OF BOXES
@@ -116,8 +119,6 @@ __kernel void kernel_gpu_opencl(	par_str d_par_gpu,
 
 		// home box
 		int first_i;
-		// (enable the line below only if wanting to use shared memory)
-		__local FOUR_VECTOR rA_shared[100];
 
 		// nei box
 		int pointer;
@@ -125,8 +126,6 @@ __kernel void kernel_gpu_opencl(	par_str d_par_gpu,
 		int first_j;
 		int j = 0;
 		// (enable the two lines below only if wanting to use shared memory)
-		__local FOUR_VECTOR rB_shared[100];
-		__local fp qB_shared[100];
 
 		// common
 		fp r2;

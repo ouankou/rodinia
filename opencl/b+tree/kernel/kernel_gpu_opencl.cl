@@ -12,9 +12,13 @@
 
 // double precision support (switch between as needed for NVIDIA/AMD)
 #ifdef AMDAPP
+#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64 : enable
+#endif
 #else
+#ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
 #endif
 
 // clBuildProgram compiler cannot link this file for some reason, so had to redefine constants and structures below

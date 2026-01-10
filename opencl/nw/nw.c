@@ -84,8 +84,9 @@ static int initialize(int use_gpu)
 	if( result != CL_SUCCESS ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
 
 	// create command queue for the first device
-	cmd_queue = clCreateCommandQueue( context, device_list[0], 0, NULL );
-	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueue() failed\n"); return -1; }
+	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+	cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
+	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueueWithProperties() failed\n"); return -1; }
 	return 0;
 }
 
@@ -205,11 +206,37 @@ int main(int argc, char **argv){
 	if(!source) { printf("ERROR: calloc(%d) failed\n", sourcesize); return -1; }
 
 	// read the kernel core source
-	char * kernel_nw1  = "nw_kernel1";
-	char * kernel_nw2  = "nw_kernel2";
+	const char *kernel_nw1  = "nw_kernel1";
+	const char *kernel_nw2  = "nw_kernel2";
 	FILE * fp = fopen(tempchar, "rb"); 
-	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); return -1; }
-	fread(source + strlen(source), sourcesize, 1, fp);
+	if(!fp) { printf("ERROR: unable to open '%s'\n", tempchar); free(source); return -1; }
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	long fsize = ftell(fp);
+	if (fsize < 0) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	if (fsize >= sourcesize) {
+		printf("ERROR: kernel file '%s' is too large\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	rewind(fp);
+	if (fread(source, 1, (size_t)fsize, fp) != (size_t)fsize) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
+	source[fsize] = '\0';
 	fclose(fp);
 
 	int nworkitems, workgroupsize = 0;
@@ -220,18 +247,27 @@ int main(int argc, char **argv){
 		return -1;
 	}
 		// set global and local workitems
-	size_t local_work[3] = { (workgroupsize>0)?workgroupsize:1, 1, 1 };
-	size_t global_work[3] = { nworkitems, 1, 1 }; //nworkitems = no. of GPU threads
+	size_t local_work[3] = { (size_t)((workgroupsize>0)?workgroupsize:1), 1, 1 };
+	size_t global_work[3] = { (size_t)nworkitems, 1, 1 }; //nworkitems = no. of GPU threads
 	
-	int use_gpu = 1;
+	int use_gpu =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		0;
+#else
+		1;
+#endif
 	// OpenCL initialization
-	if(initialize(use_gpu)) return -1;
+	if (initialize(use_gpu)) {
+		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+		free(source);
+		return -1;
+	}
 
 	// compile kernel
 	cl_int err = 0;
 	const char * slist[2] = { source, 0 };
 	cl_program prog = clCreateProgramWithSource(context, 1, slist, NULL, &err);
-	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clCreateProgramWithSource() => %d\n", err); free(source); return -1; }
 
 	char clOptions[110];
 	//  sprintf(clOptions,"-I../../src");                                                                                 
@@ -249,7 +285,9 @@ int main(int argc, char **argv){
 		clGetProgramBuildInfo(prog, device_id, CL_PROGRAM_BUILD_LOG, sizeof(log)-1, log, NULL);
 		if(err || strstr(log,"warning:") || strstr(log, "error:")) printf("<<<<\n%s\n>>>>\n", log);
 	}*/
-	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); return -1; }
+	if(err != CL_SUCCESS) { printf("ERROR: clBuildProgram() => %d\n", err); free(source); return -1; }
+	free(source);
+	source = NULL;
     	
 	cl_kernel kernel1;
 	cl_kernel kernel2;
@@ -410,4 +448,3 @@ int main(int argc, char **argv){
 	free(output_itemsets);
 	
 }
-

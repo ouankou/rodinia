@@ -24,6 +24,7 @@
 //	UTILITIES
 //======================================================================================================================================================150
 
+#include "../util/opencl/opencl.h"						// (in directory provided here)
 #include "../util/timer/timer.h"						// (in directory provided here)
 
 //======================================================================================================================================================150
@@ -130,10 +131,16 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 													(cl_context_properties) platform, 
 													0};
 
-	// Create context for selected platform being GPU
+	// Create context for selected platform and device type
 	cl_context context;
+	cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		CL_DEVICE_TYPE_CPU;
+#else
+		CL_DEVICE_TYPE_GPU;
+#endif
 	context = clCreateContextFromType(	context_properties, 
-										CL_DEVICE_TYPE_GPU, 
+										device_type, 
 										NULL, 
 										NULL, 
 										&error);
@@ -184,9 +191,10 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 
 	// Create a command queue
 	cl_command_queue command_queue;
-	command_queue = clCreateCommandQueue(	context, 
-											device, 
-											0, 
+	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+	command_queue = clCreateCommandQueueWithProperties(context,
+											device,
+											queue_props,
 											&error);
 	if (error != CL_SUCCESS) 
 		fatal_CL(error, __LINE__);

@@ -47,10 +47,26 @@ read_parameters(char* filename,
 	//	READ VALUES FROM THE FILE
 	//================================================================================80
 
-	fscanf(fid, "%d", &tSize[0]);
-	fscanf(fid, "%d", &sSize[0]);
-	fscanf(fid, "%d", &maxMove[0]);
-	fscanf(fid, "%f", &alpha[0]);
+	if (fscanf(fid, "%d", &tSize[0]) != 1) {
+		fprintf(stderr, "Failed to read tSize from %s\n", filename);
+		fclose(fid);
+		return;
+	}
+	if (fscanf(fid, "%d", &sSize[0]) != 1) {
+		fprintf(stderr, "Failed to read sSize from %s\n", filename);
+		fclose(fid);
+		return;
+	}
+	if (fscanf(fid, "%d", &maxMove[0]) != 1) {
+		fprintf(stderr, "Failed to read maxMove from %s\n", filename);
+		fclose(fid);
+		return;
+	}
+	if (fscanf(fid, "%f", &alpha[0]) != 1) {
+		fprintf(stderr, "Failed to read alpha from %s\n", filename);
+		fclose(fid);
+		return;
+	}
 
 	//================================================================================80
 	//	CLOSE FILE
@@ -103,9 +119,17 @@ read_header(char* filename,
 	//	READ VALUES FROM THE FILE
 	//================================================================================80
 
-	fscanf(fid, "%d", &size[0]);
+	if (fscanf(fid, "%d", &size[0]) != 1) {
+		fprintf(stderr, "Failed to read size from %s\n", filename);
+		fclose(fid);
+		return;
+	}
 
-	fscanf(fid, "%d", &size_2[0]);
+	if (fscanf(fid, "%d", &size_2[0]) != 1) {
+		fprintf(stderr, "Failed to read size_2 from %s\n", filename);
+		fclose(fid);
+		return;
+	}
 
 	//================================================================================80
 	//	CLOSE FILE
@@ -163,17 +187,33 @@ read_data(	char* filename,
 	//================================================================================80
 
 	for(i=0; i<size; i++){
-		fscanf(fid, "%d", &input_a[i]);
+		if (fscanf(fid, "%d", &input_a[i]) != 1) {
+			fprintf(stderr, "Failed to read input_a[%d] from %s\n", i, filename);
+			fclose(fid);
+			return;
+		}
 	}
 	for(i=0; i<size; i++){
-		fscanf(fid, "%d", &input_b[i]);
+		if (fscanf(fid, "%d", &input_b[i]) != 1) {
+			fprintf(stderr, "Failed to read input_b[%d] from %s\n", i, filename);
+			fclose(fid);
+			return;
+		}
 	}
 
 	for(i=0; i<size_2; i++){
-		fscanf(fid, "%d", &input_2a[i]);
+		if (fscanf(fid, "%d", &input_2a[i]) != 1) {
+			fprintf(stderr, "Failed to read input_2a[%d] from %s\n", i, filename);
+			fclose(fid);
+			return;
+		}
 	}
 	for(i=0; i<size_2; i++){
-		fscanf(fid, "%d", &input_2b[i]);
+		if (fscanf(fid, "%d", &input_2b[i]) != 1) {
+			fprintf(stderr, "Failed to read input_2b[%d] from %s\n", i, filename);
+			fclose(fid);
+			return;
+		}
 	}
 
 	//================================================================================80
@@ -228,7 +268,7 @@ void write_data(	char* filename,
 	for(j=0; j<frames_processed;j++)
 	  {
 	    fprintf(fid, "\n---Frame %d---",j);
-	    fprintf(fid, "\n--endo--\n",j);
+	    fprintf(fid, "\n--endo--\n");
 	    for(i=0; i<endoPoints; i++){
 	      fprintf(fid, "%d\t", input_a[j+i*frameNo]);
 	    }
@@ -237,7 +277,7 @@ void write_data(	char* filename,
 	      // if(input_b[j*size+i] > 2000) input_b[j*size+i]=0;
 	      fprintf(fid, "%d\t", input_b[j+i*frameNo]);
 	    }
-	    fprintf(fid, "\n--epi--\n",j);
+	    fprintf(fid, "\n--epi--\n");
 	    for(i=0; i<epiPoints; i++){
 	      //if(input_2a[j*size_2+i] > 2000) input_2a[j*size_2+i]=0;
 	      fprintf(fid, "%d\t", input_2a[j+i*frameNo]);
@@ -261,4 +301,3 @@ void write_data(	char* filename,
 //===============================================================================================================================================================================================================200
 //	End
 //===============================================================================================================================================================================================================200
-
