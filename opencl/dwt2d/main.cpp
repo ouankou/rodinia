@@ -940,10 +940,10 @@ int main(int argc, char **argv)
             return -1;
         }
     }
-	argc -= optind;
-	argv += optind;
+	int remaining = argc - optind;
+	int first_arg = optind;
 
-    if (argc == 0) 
+    if (remaining == 0) 
 	{ // at least one filename is expected
         printf("Please supply src file name\n");
         usage();
@@ -1021,15 +1021,15 @@ int main(int argc, char **argv)
     d->dwtLvls  = dwtLvls;
 	
 	// file names
-    d->srcFilename = (char *)malloc(strlen(argv[0]) + 1);
-    strcpy(d->srcFilename, argv[0]);
-    if (argc == 1) 
+    d->srcFilename = (char *)malloc(strlen(argv[first_arg]) + 1);
+    strcpy(d->srcFilename, argv[first_arg]);
+    if (remaining == 1) 
 	{ // only one filename supplyed
         d->outFilename = (char *)malloc(strlen(d->srcFilename) + 5);
         strcpy(d->outFilename, d->srcFilename);
         strcpy(d->outFilename+strlen(d->srcFilename), ".dwt");
     } else {
-        d->outFilename = strdup(argv[1]);
+        d->outFilename = strdup(argv[first_arg + 1]);
     }
 
     //Input review
