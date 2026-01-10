@@ -255,7 +255,8 @@ fi
 
 if should_run srad; then
   require_bin srad
-  run_cmd srad "${ROOT_DIR}/opencl/srad" "${BIN_DIR}/srad 100 0.5 502 458"
+  run_cmd srad "${ROOT_DIR}/opencl/srad" \
+    "${BIN_DIR}/srad 100 0.5 502 458 \"${OUT_DIR}/srad_image_out.pgm\""
 fi
 
 if should_run streamcluster; then

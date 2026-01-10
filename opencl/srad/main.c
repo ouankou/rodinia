@@ -17,6 +17,8 @@
 
 #include <stdio.h>									// (in path known to compiler)	needed by printf
 #include <stdlib.h>									// (in path known to compiler)	needed by malloc, free
+#include <sys/stat.h>								// (in path known to compiler)	needed by mkdir/stat
+#include <errno.h>									// (in path known to compiler)	needed by errno
 
 //======================================================================================================================================================150
 //	HEADER
@@ -74,6 +76,10 @@ main(	int argc,
 	int Nr,Nc;													// IMAGE nbr of rows/cols/elements
 	long Ne;
 
+	// output path
+	const char *output_path = "./output/image_out.pgm";
+	int output_is_default = 1;
+
 	// algorithm parameters
 	int niter;																// nbr of iterations
 	fp lambda;															// update step size
@@ -103,8 +109,9 @@ main(	int argc,
 	//	INPUT ARGUMENTS
 	//======================================================================================================================================================150
 
-	if(argc != 5){
+	if(argc != 5 && argc != 6){
 		printf("ERROR: wrong number of arguments\n");
+		printf("Usage: %s <niter> <lambda> <rows> <cols> [output_path]\n", argv[0]);
 		return 0;
 	}
 	else{
@@ -112,6 +119,10 @@ main(	int argc,
 		lambda = atof(argv[2]);
 		Nr = atoi(argv[3]);						// it is 502 in the original image
 		Nc = atoi(argv[4]);						// it is 458 in the original image
+		if (argc == 6) {
+			output_path = argv[5];
+			output_is_default = 0;
+		}
 	}
 
 	time1 = get_time();
@@ -222,7 +233,14 @@ main(	int argc,
 	// 	WRITE OUTPUT IMAGE TO FILE
 	//======================================================================================================================================================150
 
-	write_graphics(	"./output/image_out.pgm",
+	if (output_is_default) {
+		if (mkdir("./output", 0755) != 0 && errno != EEXIST) {
+			printf("ERROR: unable to create ./output directory\n");
+			return 0;
+		}
+	}
+
+	write_graphics(	(char *)output_path,
 					image,
 					Nr,
 					Nc,
