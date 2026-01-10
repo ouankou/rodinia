@@ -49,13 +49,37 @@ double mergesum = 0;
 // The mergesort algorithm
 ////////////////////////////////////////////////////////////////////////////////
 void init_mergesort(int listsize){
-    cl_uint num = 0;
-    clGetPlatformIDs(0,NULL,&num);
-    cl_platform_id platformID[num];
-    clGetPlatformIDs(num,platformID,NULL);
-    clGetDeviceIDs(platformID[1],CL_DEVICE_TYPE_GPU,0,NULL,&num);
-    cl_device_id devices[num];
-    err = clGetDeviceIDs(platformID[1],CL_DEVICE_TYPE_GPU,num,devices,NULL);
+    cl_uint platform_count = 0;
+    cl_uint device_count = 0;
+    cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+        CL_DEVICE_TYPE_CPU;
+#else
+        CL_DEVICE_TYPE_GPU;
+#endif
+    clGetPlatformIDs(0,NULL,&platform_count);
+    if (platform_count == 0) {
+        printf("Error: No OpenCL platforms found!\n");
+        exit(1);
+    }
+    cl_platform_id platformID[platform_count];
+    clGetPlatformIDs(platform_count,platformID,NULL);
+    cl_platform_id platform = platformID[0];
+    for (cl_uint i = 0; i < platform_count; ++i) {
+        if (clGetDeviceIDs(platformID[i], device_type, 0, NULL, &device_count) == CL_SUCCESS &&
+            device_count > 0) {
+            platform = platformID[i];
+            break;
+        }
+    }
+    if (device_count == 0) {
+        const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+        printf("Error: required OpenCL %s device not available!\n", device_label);
+        exit(1);
+    }
+
+    cl_device_id devices[device_count];
+    err = clGetDeviceIDs(platform, device_type, device_count, devices, NULL);
     
     if (err != CL_SUCCESS)
     {
@@ -69,7 +93,11 @@ void init_mergesort(int listsize){
     
     mergeContext = clCreateContext(0, 1, &devices[0], NULL, NULL, &err);
     
-    mergeCommands = clCreateCommandQueue(mergeContext, devices[0], CL_QUEUE_PROFILING_ENABLE, &err);
+    const cl_queue_properties queue_props_prof[] = {
+        CL_QUEUE_PROPERTIES, (cl_queue_properties)CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    mergeCommands = clCreateCommandQueueWithProperties(mergeContext, devices[0],
+                                                       queue_props_prof, &err);
     
     d_resultList_first_altered = (cl_float4 *)malloc(listsize*sizeof(float));
     d_resultList_first_buff = clCreateBuffer(mergeContext,CL_MEM_READ_WRITE, listsize * sizeof(float),NULL,NULL);
@@ -94,7 +122,7 @@ void init_mergesort(int listsize){
 	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
 
 	fclose(fp);
-    mergeProgram = clCreateProgramWithSource(mergeContext, 1, (const char **) &source_str, (const size_t)&source_size, &err);
+    mergeProgram = clCreateProgramWithSource(mergeContext, 1, (const char **) &source_str, &source_size, &err);
     if (!mergeProgram)
     {
         printf("Error: Failed to create merge compute program!\n");

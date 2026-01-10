@@ -122,7 +122,7 @@ int number_devices = 0;
 	@return:	NULL
 	@date:		24/03/2011
 ------------------------------------------------------------*/
-void _clSetDevice(int idx) throw(string){
+void _clSetDevice(int idx){
 
     cl_int resultCL;    
     oclHandles.context = NULL;
@@ -150,7 +150,13 @@ void _clSetDevice(int idx) throw(string){
     targetPlatform = allPlatforms[0];
     free(allPlatforms);
 
-   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_ALL, 0, NULL, &deviceListSize);
+   cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+	   CL_DEVICE_TYPE_CPU;
+#else
+	   CL_DEVICE_TYPE_GPU;
+#endif
+   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, device_type, 0, NULL, &deviceListSize);
    if(oclHandles.cl_status!=CL_SUCCESS){
    	throw(string("exception in _clInit -> clGetDeviceIDs"));   	
    }
@@ -171,7 +177,7 @@ void _clSetDevice(int idx) throw(string){
 	@return:	prop
 	@date:		24/03/2011
 ------------------------------------------------------------*/
-void _clGetDeviceProperties(int idx, _clDeviceProp *prop) throw(string){
+void _clGetDeviceProperties(int idx, _clDeviceProp *prop){
    
    oclHandles.cl_status= clGetDeviceInfo(oclHandles.devices[idx], CL_DEVICE_NAME, 100, prop->device_name, NULL);
    
@@ -244,14 +250,14 @@ string FileToString(const string fileName){
 	@return:
 	@date:		24/03/2011
 ------------------------------------------------------------*/
-char device_type[3];
+char device_type[8];
 int device_id = 0;
 void _clCmdParams(int argc, char* argv[]){
 	for (int i = 0; i < argc; ++i){
 		switch (argv[i][1]){
 			case 't':	//--t stands for device type
 				if (++i < argc){
-					sscanf(argv[i], "%s", device_type);
+					sscanf(argv[i], "%7s", device_type);
 				}
 				else{
 					std::cerr << "Could not read argument after option " << argv[i-1] << std::endl;
@@ -271,6 +277,17 @@ void _clCmdParams(int argc, char* argv[]){
 				;
 		}
 	}
+#ifdef RODINIA_OPENCL_FORCE_CPU
+	device_type[0] = 'c';
+	device_type[1] = 'p';
+	device_type[2] = 'u';
+	device_type[3] = '\0';
+#else
+	device_type[0] = 'g';
+	device_type[1] = 'p';
+	device_type[2] = 'u';
+	device_type[3] = '\0';
+#endif
 }
 
 /*------------------------------------------------------------
@@ -289,7 +306,7 @@ void _clCmdParams(int argc, char* argv[]){
 		get the number of devices and devices have no relationship with context
 	@date:		24/03/2011
 ------------------------------------------------------------*/
-void _clInit(string device_type, int device_id)throw(string){
+void _clInit(string device_type, int device_id){
 
 #ifdef PROFILE_
 	TE = 0;
@@ -316,6 +333,12 @@ void _clInit(string device_type, int device_id)throw(string){
     oclHandles.program = NULL;
 
     cl_uint deviceListSize;
+	cl_device_type default_device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		CL_DEVICE_TYPE_CPU;
+#else
+		CL_DEVICE_TYPE_GPU;
+#endif
     //-----------------------------------------------
     //--cambine-1: find the available platforms and select one
 
@@ -383,7 +406,7 @@ void _clInit(string device_type, int device_id)throw(string){
 		}	 	
     }
     else{
-		   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_ALL, 0, NULL, &deviceListSize);
+	   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, default_device_type, 0, NULL, &deviceListSize);
 		   if(oclHandles.cl_status!=CL_SUCCESS){
 			   throw(string("exception in _clInit -> clGetDeviceIDs -> ALL"));   	
 	       }
@@ -425,7 +448,7 @@ void _clInit(string device_type, int device_id)throw(string){
    	   }  	 	
    	}
    	else{
-	   	 oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_ALL, deviceListSize, oclHandles.devices, NULL);
+	   	 oclHandles.cl_status = clGetDeviceIDs(targetPlatform, default_device_type, deviceListSize, oclHandles.devices, NULL);
 	   	 if(oclHandles.cl_status!=CL_SUCCESS){
 	   	 	throw(string("exception in _clInit -> clGetDeviceIDs -> ALL -> 2"));   		   	
    	   	}
@@ -464,13 +487,14 @@ void _clInit(string device_type, int device_id)throw(string){
 
    //-----------------------------------------------
    //--cambine-4: Create an OpenCL command queue    
-    oclHandles.queue = clCreateCommandQueue(oclHandles.context, 
-                                            oclHandles.devices[DEVICE_ID_INUSED], 
-                                            0, 
-                                            &resultCL);
+    const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+    oclHandles.queue = clCreateCommandQueueWithProperties(oclHandles.context, 
+                                                          oclHandles.devices[DEVICE_ID_INUSED], 
+                                                          queue_props, 
+                                                          &resultCL);
 
     if ((resultCL != CL_SUCCESS) || (oclHandles.queue == NULL))
-        throw(string("InitCL()::Creating Command Queue. (clCreateCommandQueue)"));
+        throw(string("InitCL()::Creating Command Queue. (clCreateCommandQueueWithProperties)"));
 #ifdef PROFILE_
 	double t2 = gettime();
 	CC += t2 - t1;
@@ -669,7 +693,7 @@ void _clRelease()
 	@return:	mem_d
 	@date:		24/03/2011
 ------------------------------------------------------------*/
-cl_mem _clMalloc(int size) throw(string){
+cl_mem _clMalloc(int size){
 #ifdef PROFILE_
 	double t1 = gettime();
 #endif
@@ -718,7 +742,7 @@ cl_mem _clMalloc(int size) throw(string){
 	@date:		06/04/2011
 ------------------------------------------------------------*/
 
-void* _clMallocHost(int size)throw(string){
+void* _clMallocHost(int size){
 	void * mem_h;
 	oclHandles.pinned_mem_out = clCreateBuffer(oclHandles.context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, size, NULL, &oclHandles.cl_status);
 #ifdef ERRMSG
@@ -879,7 +903,7 @@ void _clFreeHost(int io, void * mem_h){
 	@return:	NULL
 	@date:		17/01/2011
 ------------------------------------------------------------*/
-void _clMemcpyH2D(cl_mem dst, const void *src, int size) throw(string){
+void _clMemcpyH2D(cl_mem dst, const void *src, int size){
 #ifdef PROFILE_
 	double t1 = gettime();
 #endif
@@ -931,7 +955,7 @@ void _clMemcpyH2D(cl_mem dst, const void *src, int size) throw(string){
 	@return:	NULL
 	@date:		17/01/2011
 ------------------------------------------------------------*/
-void _clMemcpyD2H(void * dst, cl_mem src, int size) throw(string){
+void _clMemcpyD2H(void * dst, cl_mem src, int size){
 #ifdef PROFILE_
 	double t1 = gettime();
 #endif
@@ -982,7 +1006,7 @@ void _clMemcpyD2H(void * dst, cl_mem src, int size) throw(string){
 	@return:	NULL
 	@date:		27/03/2011
 ------------------------------------------------------------*/
-void _clMemcpyD2D(cl_mem dst, cl_mem src, int size) throw(string){
+void _clMemcpyD2D(cl_mem dst, cl_mem src, int size){
 #ifdef PROFILE_
 	double t1 = gettime();
 #endif
@@ -1044,7 +1068,7 @@ void _clMemcpyD2D(cl_mem dst, cl_mem src, int size) throw(string){
 	@return:	NULL
 	@date:		03/04/2011
 ------------------------------------------------------------*/
-void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0) throw(string){
+void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0){
 	if(!size){
 		oclHandles.cl_status = clSetKernelArg(oclHandles.kernel[kernel_id], arg_idx, sizeof(d_mem), &d_mem);
 		#ifdef ERRMSG
@@ -1120,7 +1144,7 @@ void _clSetArgs(int kernel_id, int arg_idx, void * d_mem, int size = 0) throw(st
 		#endif
 	}
 }
-void _clFinish() throw(string){
+void _clFinish(){
 	oclHandles.cl_status = clFinish(oclHandles.queue);	
 #ifdef ERRMSG
 	if(oclHandles.cl_status!=CL_SUCCESS){
@@ -1152,7 +1176,7 @@ void _clFinish() throw(string){
 	@return:	NULL
 	@date:		03/04/2011
 ------------------------------------------------------------*/
-void _clInvokeKernel(int kernel_id, int work_items, int work_group_size) throw(string){
+void _clInvokeKernel(int kernel_id, int work_items, int work_group_size){
 #ifdef PROFILE_
 	double t1 = gettime();
 #endif
@@ -1160,8 +1184,8 @@ void _clInvokeKernel(int kernel_id, int work_items, int work_group_size) throw(s
 	cl_event e[1];
 	if(work_items%work_group_size != 0)	//process situations that work_items cannot be divided by work_group_size
 	  work_items = work_items + (work_group_size-(work_items%work_group_size));
-  	size_t local_work_size[] = {work_group_size, 1};
-	size_t global_work_size[] = {work_items, 1};
+  	size_t local_work_size[] = {(size_t)work_group_size, 1};
+	size_t global_work_size[] = {(size_t)work_items, 1};
 	oclHandles.cl_status = clEnqueueNDRangeKernel(oclHandles.queue, oclHandles.kernel[kernel_id], work_dim, 0, \
 											global_work_size, local_work_size, 0 , 0, &(e[0]) );	
 	#ifdef ERRMSG
@@ -1265,7 +1289,7 @@ void _clInvokeKernel(int kernel_id, int work_items, int work_group_size) throw(s
 	@date:		03/04/2011
 ------------------------------------------------------------*/
 
-void _clMemset(cl_mem mem_d, short val, int number_bytes)throw(string){
+void _clMemset(cl_mem mem_d, short val, int number_bytes){
 	int kernel_id = 0;
 	int arg_idx = 0;
 	_clSetArgs(kernel_id, arg_idx++, mem_d);
@@ -1284,13 +1308,13 @@ void _clMemset(cl_mem mem_d, short val, int number_bytes)throw(string){
 	@return:	NULL
 	@date:		03/04/2011
 ------------------------------------------------------------*/
-void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int group_y) throw(string){
+void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int group_y){
 #ifdef PROFILE_
 	double t1 = gettime();
 #endif
 	cl_uint work_dim = WORK_DIM;
-	size_t local_work_size[] = {group_x, group_y};
-	size_t global_work_size[] = {range_x, range_y};
+	size_t local_work_size[] = {(size_t)group_x, (size_t)group_y};
+	size_t global_work_size[] = {(size_t)range_x, (size_t)range_y};
 	cl_event e[1];
 	/*if(work_items%work_group_size != 0)	//process situations that work_items cannot be divided by work_group_size
 	  work_items = work_items + (work_group_size-(work_items%work_group_size));*/
@@ -1372,7 +1396,7 @@ void _clInvokeKernel2D(int kernel_id, int range_x, int range_y, int group_x, int
 	@date:		03/04/2011
 ------------------------------------------------------------*/
 
-void _clFree(cl_mem ob) throw(string){
+void _clFree(cl_mem ob){
 #ifdef PROFILE_
 	double t1 = gettime();	
 #endif

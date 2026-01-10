@@ -122,7 +122,13 @@ void OpenCL::buildKernel()
 	rewind(theFile);
 	// Read in the file.
 	source_str = (char*) malloc(sizeof(char) * (source_size + 1));
-	fread(source_str, 1, source_size, theFile);
+	if (fread(source_str, 1, source_size, theFile) != source_size)
+	{
+		printf("\nError reading kernel file\n\n");
+		fclose(theFile);
+		free(source_str);
+		exit(1);
+	}
 	fclose(theFile);
 	source_str[source_size] = '\0';
 
@@ -143,7 +149,7 @@ void OpenCL::buildKernel()
 	free(source_str);
 	
 	// Build (compile) the program.
-	ret = clBuildProgram(program, NULL, NULL, NULL, NULL, NULL);
+	ret = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
 	
 	if (ret != CL_SUCCESS)
 	{
@@ -224,7 +230,13 @@ void OpenCL::getDevices(cl_device_type deviceType)
 		}
 	}
 	
-	clGetDeviceIDs(platform_id[0], deviceType, 100, device_id, &devices_n);
+	cl_int ret = clGetDeviceIDs(platform_id[0], deviceType, 100, device_id, &devices_n);
+	if (ret != CL_SUCCESS || devices_n == 0)
+	{
+		const char *device_label = (deviceType == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+		printf("Error: required OpenCL %s device not available\n", device_label);
+		exit(1);
+	}
 	if (VERBOSE)
 	{
 		printf("Using the default platform (platform 0)...\n\n");
@@ -274,10 +286,12 @@ void OpenCL::getDevices(cl_device_type deviceType)
 	}
  
 	// Create a command queue.
-	command_queue = clCreateCommandQueue(context, device_id[0], 0, &ret);
+	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+	command_queue = clCreateCommandQueueWithProperties(context, device_id[0],
+	                                                   queue_props, &ret);
 	if (ret != CL_SUCCESS)
 	{
-		printf("\nError at clCreateCommandQueue! Error code %i\n\n", ret);
+		printf("\nError at clCreateCommandQueueWithProperties! Error code %i\n\n", ret);
 		exit(1);
 	}
 }

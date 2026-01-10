@@ -52,7 +52,7 @@ void ocl_print_float_array(cl_command_queue cmd_q, cl_mem array_GPU, size_t size
     printf("PRINTING ARRAY VALUES\n");
     //print values in memory
     for (size_t i = 0; i < size; ++i) {
-        printf("[%d]:%0.6f\n", i, mem[i]);
+        printf("[%zu]:%0.6f\n", i, mem[i]);
     }
     printf("FINISHED PRINTING ARRAY VALUES\n");
 
@@ -146,9 +146,10 @@ static int initialize(int use_gpu) {
     threads_per_block = max_work_item_sizes[0];
 
    // create command queue for the first device
-    cmd_queue = clCreateCommandQueue(context, device_list[0], 0, NULL);
+    const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+    cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
     if (!cmd_queue) {
-        printf("ERROR: clCreateCommandQueue() failed\n");
+        printf("ERROR: clCreateCommandQueueWithProperties() failed\n");
         return -1;
     }
 
@@ -500,18 +501,32 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     }
 
     // read the kernel core source
-    char * tempchar = "./particle_single.cl";
+    const char *tempchar = "./particle_single.cl";
     FILE * fp = fopen(tempchar, "rb");
     if (!fp) {
         printf("ERROR: unable to open '%s'\n", tempchar);
         return -1;
     }
-    fread(source + strlen(source), sourcesize, 1, fp);
+    size_t read_size = fread(source, 1, (size_t)sourcesize - 1, fp);
+    if (read_size == 0 && ferror(fp)) {
+        printf("ERROR: unable to read '%s'\n", tempchar);
+        fclose(fp);
+        free(source);
+        return -1;
+    }
     fclose(fp);
 
     // OpenCL initialization
-    int use_gpu = 1;
-    if (initialize(use_gpu)) return -1;
+    int use_gpu =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+        0;
+#else
+        1;
+#endif
+    if (initialize(use_gpu)) {
+        printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+        return -1;
+    }
 
     // compile kernel
     cl_int err = 0;
@@ -574,10 +589,10 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     //     }
     // }//*/
 
-    char * s_likelihood_kernel = "likelihood_kernel";
-    char * s_sum_kernel = "sum_kernel";
-    char * s_normalize_weights_kernel = "normalize_weights_kernel";
-    char * s_find_index_kernel = "find_index_kernel";
+    const char *s_likelihood_kernel = "likelihood_kernel";
+    const char *s_sum_kernel = "sum_kernel";
+    const char *s_normalize_weights_kernel = "normalize_weights_kernel";
+    const char *s_find_index_kernel = "find_index_kernel";
 
     kernel_likelihood = clCreateKernel(prog, s_likelihood_kernel, &err);
     if (err != CL_SUCCESS) {
@@ -759,8 +774,8 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     printf("TIME TO SEND TO GPU: %f\n", elapsed_time(send_start, send_end));
     int num_blocks = ceil((float) Nparticles / (float) threads_per_block);
     printf("threads_per_block=%d \n",threads_per_block);
-    size_t local_work[3] = {threads_per_block, 1, 1};
-    size_t global_work[3] = {num_blocks*threads_per_block, 1, 1};
+    size_t local_work[3] = {(size_t)threads_per_block, 1, 1};
+    size_t global_work[3] = {(size_t)num_blocks * (size_t)threads_per_block, 1, 1};
 
     for (k = 1; k < Nfr; k++) {
         /****************** L I K E L I H O O D ************************************/
@@ -958,11 +973,12 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     free(CDF);
     free(ind);
     free(u);
+    return 0;
 }
 
 int main(int argc, char * argv[]) {
 
-    char* usage = "float.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
+    const char* usage = "float.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
     //check number of arguments
     if (argc != 9) {
         printf("%s\n", usage);

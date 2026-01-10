@@ -24,6 +24,7 @@
 //======================================================================================================================================================150
 
 #include <stdio.h>										// (in path known to compiler)	needed by printf
+#include <math.h>									// (in path known to compiler) needed by isnan/isinf
 #include <CL/cl.h>										// (in path provided to compiler)	needed by OpenCL types and functions
 
 //======================================================================================================================================================150

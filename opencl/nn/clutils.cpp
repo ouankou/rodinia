@@ -101,6 +101,11 @@ static bool eventsEnabled = false;
 cl_context cl_init(char devicePreference) 
 {
     cl_int status;   
+#ifdef RODINIA_OPENCL_FORCE_CPU
+    devicePreference = 'c';
+#else
+    devicePreference = 'g';
+#endif
 
     // Discover and populate the platforms
     status = clGetPlatformIDs(0, NULL, &numPlatforms);
@@ -220,11 +225,16 @@ cl_context cl_init(char devicePreference)
     cl_errChk(status, "Creating context", true);
  
     // Create the command queue
-    commandQueueProf = clCreateCommandQueue(context, device, 
-                            CL_QUEUE_PROFILING_ENABLE, &status);
+    const cl_queue_properties queue_props_prof[] = {
+        CL_QUEUE_PROPERTIES, (cl_queue_properties)CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+    commandQueueProf = clCreateCommandQueueWithProperties(context, device,
+                                                          queue_props_prof, &status);
     cl_errChk(status, "creating command queue", true);
 
-    commandQueueNoProf = clCreateCommandQueue(context, device, 0, &status);
+    commandQueueNoProf = clCreateCommandQueueWithProperties(context, device,
+                                                            queue_props, &status);
     cl_errChk(status, "creating command queue", true);
 
     if(eventsEnabled) {
@@ -242,6 +252,12 @@ cl_context cl_init_context(int platform, int dev,int quiet) {
     int printInfo=1;
     if (platform >= 0 && dev >= 0) printInfo = 0;
 	cl_int status;
+	cl_device_type requested_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		CL_DEVICE_TYPE_CPU;
+#else
+		CL_DEVICE_TYPE_GPU;
+#endif
 	// Used to iterate through the platforms and devices, respectively
 	cl_uint numPlatforms;
 	cl_uint numDevices;
@@ -275,20 +291,21 @@ cl_context cl_init_context(int platform, int dev,int quiet) {
 
 			//unsigned int numDevices;
 
-			status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices);
-			if(cl_errChk(status, "checking for devices",true))
+			status = clGetDeviceIDs(platforms[i], requested_type, 0, NULL, &numDevices);
+			if (status == CL_DEVICE_NOT_FOUND) {
+				numDevices = 0;
+			} else if (cl_errChk(status, "checking for devices", true)) {
 				exit(1);
-			if(numDevices == 0) {
-				printf("There are no devices for Platform %d\n",i);
-				exit(0);
 			}
-			else
-			{
+			if(numDevices == 0) {
+				if (printInfo) printf("\tNo matching devices for Platform %d\n",i);
+				continue;
+			} else {
 				if (printInfo) printf("\tNo of devices for Platform %d is %u\n",i, numDevices);
 				//! Allocate an array of devices of size "numDevices"
 				devices = (cl_device_id*)malloc(sizeof(cl_device_id)*numDevices);
 				//! Populate Arrray with devices
-				status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, numDevices,
+				status = clGetDeviceIDs(platforms[i], requested_type, numDevices,
 					devices, NULL);
 				if(cl_errChk(status, "getting device IDs",true)) {
 					exit(1);
@@ -316,37 +333,53 @@ cl_context cl_init_context(int platform, int dev,int quiet) {
 		exit(0);
 	}
 
-	int platform_touse;
-	unsigned int device_touse;
-	if (printInfo) printf("Enter Platform and Device No (Seperated by Space) \n");
-	if (printInfo) scanf("%d %d", &platform_touse, &device_touse);
-	else {
-	  platform_touse = platform;
-	  device_touse = dev;
+	int platform_touse = platform;
+	int device_index = dev;
+	if (platform_touse < 0 || device_index < 0) {
+		platform_touse = -1;
+		device_index = 0;
+		for (unsigned int i = 0; i < numPlatforms; ++i) {
+			status = clGetDeviceIDs(platforms[i], requested_type, 0, NULL, &numDevices);
+			if (status == CL_DEVICE_NOT_FOUND) {
+				continue;
+			}
+			if (cl_errChk(status, "checking for devices", true)) {
+				exit(1);
+			}
+			if (numDevices > 0) {
+				platform_touse = (int)i;
+				break;
+			}
+		}
 	}
-	if (!quiet) printf("Using Platform %d \t Device No %d \n",platform_touse, device_touse);
-
-	//! Recheck how many devices does our chosen platform have
-	status = clGetDeviceIDs(platforms[platform_touse], CL_DEVICE_TYPE_ALL, 0, NULL, &numDevices);
-
-	if(device_touse > numDevices)
-	{
-		printf("Invalid Device Number\n");
+	if (platform_touse < 0 || (cl_uint)platform_touse >= numPlatforms) {
+		const char *device_label = (requested_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
+		printf("No OpenCL %s devices found\n", device_label);
 		exit(1);
 	}
+	if (!quiet) printf("Using Platform %d \t Device No %d \n",platform_touse, device_index);
+
+	//! Recheck how many devices does our chosen platform have
+	status = clGetDeviceIDs(platforms[platform_touse], requested_type, 0, NULL, &numDevices);
+
+if(device_index >= (int)numDevices)
+{
+	printf("Invalid Device Number\n");
+	exit(1);
+}
 	
 	//! Populate devices array with all the visible devices of our chosen platform
 	devices = (cl_device_id *)malloc(sizeof(cl_device_id)*numDevices);
-	status = clGetDeviceIDs(platforms[platform_touse],
-					CL_DEVICE_TYPE_ALL, numDevices,
+status = clGetDeviceIDs(platforms[platform_touse],
+					requested_type, numDevices,
 					devices, NULL);
 	if(cl_errChk(status,"Error in Getting Devices\n",true)) exit(1);
 
 
 	//!Check if Device requested is a CPU or a GPU
 	cl_device_type dtype;
-	device = devices[device_touse];
-	status = clGetDeviceInfo(devices[device_touse],
+	device = devices[device_index];
+	status = clGetDeviceInfo(devices[device_index],
 					CL_DEVICE_TYPE,
 					sizeof(dtype),
 					(void *)&dtype,
@@ -376,13 +409,17 @@ cl_context cl_init_context(int platform, int dev,int quiet) {
 
 #ifdef PROFILING
 
-	commandQueue = clCreateCommandQueue(context,
-						devices[device_touse], CL_QUEUE_PROFILING_ENABLE, &status);
+	const cl_queue_properties queue_props_prof[] = {
+		CL_QUEUE_PROPERTIES, (cl_queue_properties)CL_QUEUE_PROFILING_ENABLE, 0
+	};
+	commandQueue = clCreateCommandQueueWithProperties(context,
+						devices[device_index], queue_props_prof, &status);
 
 #else
 
-	clCommandQueue = clCreateCommandQueue(clGPUContext,
-						devices[device_touse], NULL, &status);
+	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+	clCommandQueue = clCreateCommandQueueWithProperties(clGPUContext,
+						devices[device_index], queue_props, &status);
 
 #endif // PROFILING
 
@@ -586,7 +623,12 @@ cl_mem cl_allocImage(size_t height, size_t width, char type, cl_mem_flags flags)
     allocationSize += height*width*elemSize;
 
     // Create the image
-    mem = clCreateImage2D(context, flags, &format, width, height, 0, NULL, &status);
+    cl_image_desc desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.image_type = CL_MEM_OBJECT_IMAGE2D;
+    desc.image_width = width;
+    desc.image_height = height;
+    mem = clCreateImage(context, flags, &format, &desc, NULL, &status);
 
     //cl_errChk(status, "creating image", true);
     if(status != CL_SUCCESS) {
@@ -668,7 +710,7 @@ void cl_copyBufferToHost(void* dst, cl_mem src, size_t mem_size, cl_bool blockin
 void cl_copyBufferToImage(cl_mem buffer, cl_mem image, int height, int width) 
 {
     size_t origin[3] = {0, 0, 0};
-    size_t region[3] = {width, height, 1};
+    size_t region[3] = {(size_t)width, (size_t)height, 1};
 
     cl_int status;          
     status = clEnqueueCopyBufferToImage(commandQueue, buffer, image, 0, 
@@ -815,7 +857,13 @@ cl_program cl_compileProgram(char* kernelPath, char* compileoptions, bool verbos
     }
 
     // Read in the source code
-    fread(source, 1, size, fp);
+    size_t read_size = fread(source, 1, (size_t)size, fp);
+    if (read_size != (size_t)size) {
+        if (ferror(fp)) {
+            printf("Error reading kernel file\n");
+            exit(-1);
+        }
+    }
     source[size] = '\0';
 
     // Create the program object
@@ -1336,4 +1384,3 @@ char* cl_getPlatformVendor(cl_platform_id platform)
 
     return(platformInfoStr);
 }
-

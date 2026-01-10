@@ -1,4 +1,5 @@
 #include "CL_helper.h"
+#include <sys/time.h>
 
 #define STR_SIZE 256
 
@@ -338,5 +339,4 @@ float accuracy(float *arr1, float *arr2, int len)
     return (float)sqrt(err/len);
 }
  
-
 

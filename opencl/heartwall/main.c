@@ -27,6 +27,8 @@
 
 #include "./util/avi/avilib.h"					// (in directory)							needed by avi functions
 #include "./util/avi/avimod.h"					// (in directory)							needed by avi functions
+#include "./util/file/file.h"					// (in directory)							needed by file functions
+#include "./util/timer/timer.h"				// (in directory)							needed by timing functions
 
 //======================================================================================================================================================150
 //	KERNEL

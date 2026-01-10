@@ -120,6 +120,7 @@
 
 #include <stdio.h>											// (in path known to compiler) needed by printf
 #include <stdlib.h>											// (in path known to compiler) meeded by malloc, free
+#include <string.h>										// (in path known to compiler) needed by strcmp
 
 //======================================================================================================================================================150
 //	HEADER
@@ -258,9 +259,11 @@ main(	int argc,
 		for(i=0; i<workload; i++){
 			read_file("../../data/myocyte/params.txt",
 						params[i],
-						PARAMETERS,
+						16,
 						1,
 						0);
+			params[i][16] = (fp)135;
+			params[i][17] = (fp)1;
 		}
 
 		//====================================================================================================100
@@ -277,12 +280,11 @@ main(	int argc,
 
 
 	  FILE * pFile;
-	  pFile = fopen ("output.txt","w");
-	  if (pFile==NULL)
-	    {
-	  fputs ("fopen example",pFile);
-	  return -1;
-	}
+	  pFile = fopen("output.txt", "w");
+	  if (pFile == NULL) {
+	    perror("fopen output.txt");
+	    return -1;
+	  }
 	  // print results
 	  int k;
 	  for(i=0; i<workload; i++){

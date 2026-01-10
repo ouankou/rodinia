@@ -30,7 +30,7 @@ int A = 1103515245;
  */
 int C = 12345;
 
-const int threads_per_block = 128;
+int threads_per_block = 128;
 
 #ifdef WIN
 #include <windows.h>
@@ -57,6 +57,7 @@ static cl_command_queue cmd_queue;
 static cl_device_type device_type;
 static cl_device_id * device_list;
 static cl_int num_devices;
+
 //GPU copies of arrays
 static cl_mem arrayX_GPU;
 static cl_mem arrayY_GPU;
@@ -81,25 +82,53 @@ double * u;
 @param use_gpu 
 **************************************************/
 static int initialize(int use_gpu) {
-    cl_int result;
+    cl_int err;
     size_t size;
 
     // create OpenCL context
-    cl_platform_id platform_id;
-    if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) {
+    // you have to specify what platform you want to use
+    // not uncommon for both NVIDIA and AMD to be installed
+    cl_platform_id platform_id[2];
+
+    cl_uint num_avail;
+    err = clGetPlatformIDs(2, platform_id, &num_avail);
+    if (err != CL_SUCCESS) {
+        if (err == CL_INVALID_VALUE)printf("clGetPlatformIDs() returned invalid_value\n");
         printf("ERROR: clGetPlatformIDs(1,*,0) failed\n");
         return -1;
     }
-    cl_context_properties ctxprop[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platform_id, 0};
+    printf("number of available platforms:%d.\n",num_avail);
+    char info[100];
+    clGetPlatformInfo(platform_id[0], CL_PLATFORM_VENDOR, 100, info, NULL);
+    printf("clGetPlatformInfo: %s\n", info);
+
+    cl_context_properties ctxprop[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platform_id[0], 0};
     device_type = use_gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
-    context = clCreateContextFromType(ctxprop, device_type, NULL, NULL, NULL);
+    context = clCreateContextFromType(ctxprop, device_type, NULL, NULL, &err);
+
     if (!context) {
+        if (CL_INVALID_PLATFORM == err)
+            printf("CL_INVALID_PLATFORM returned by clCreateContextFromType()\n");
+        else if (CL_INVALID_VALUE == err)
+            printf("CL_INVALID_VALUE returned by clCreateContextFromType()\n");
+        else if (CL_INVALID_DEVICE_TYPE == err)
+            printf("CL_INVALID_DEVICE_TYPE returned by clCreateContextFromType()\n");
+        else if (CL_INVALID_OPERATION == err)
+            printf("CL_INVALID_OPERATION returned by clCreateContextFromType()\n");
+        else if (CL_DEVICE_NOT_AVAILABLE == err)
+            printf("CL_DEVICE_NOT_AVAILABLE returned by clCreateContextFromType()\n");
+        else if (CL_DEVICE_NOT_FOUND == err)
+            printf("CL_DEVICE_NOT_FOUND returned by clCreateContextFromType()\n");
+        else if (CL_OUT_OF_RESOURCES == err)
+            printf("CL_OUT_OF_RESOURCES returned by clCreateContextFromType()\n");
+
+
         printf("ERROR: clCreateContextFromType(%s) failed\n", use_gpu ? "GPU" : "CPU");
         return -1;
     }
 
     // get the list of GPUs
-    result = clGetContextInfo(context, CL_CONTEXT_DEVICES, 0, NULL, &size);
+    cl_int result = clGetContextInfo(context, CL_CONTEXT_DEVICES, 0, NULL, &size);
     num_devices = (int) (size / sizeof (cl_device_id));
 
     if (result != CL_SUCCESS || num_devices < 1) {
@@ -116,11 +145,21 @@ static int initialize(int use_gpu) {
         printf("ERROR: clGetContextInfo() failed\n");
         return -1;
     }
+    size_t max_work_item_sizes[3];
+    result = clGetDeviceInfo(device_list[0], CL_DEVICE_MAX_WORK_ITEM_SIZES,
+                sizeof(max_work_item_sizes), (void*)max_work_item_sizes, NULL);
+    if (result != CL_SUCCESS) {
+        printf("ERROR: clGetDeviceInfo() failed\n");
+        return -1;
+    }
+  if (max_work_item_sizes[0] < threads_per_block)
+    threads_per_block = max_work_item_sizes[0];
 
-    // create command queue for the first device
-    cmd_queue = clCreateCommandQueue(context, device_list[0], 0, NULL);
+   // create command queue for the first device
+    const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+    cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
     if (!cmd_queue) {
-        printf("ERROR: clCreateCommandQueue() failed\n");
+        printf("ERROR: clCreateCommandQueueWithProperties() failed\n");
         return -1;
     }
 
@@ -131,7 +170,7 @@ static int shutdown() {
     // release resources
     if (cmd_queue) clReleaseCommandQueue(cmd_queue);
     if (context) clReleaseContext(context);
-    if (device_list) delete device_list;
+    if (device_list) delete[] device_list;
 
     // reset all variables
     cmd_queue = 0;
@@ -443,18 +482,32 @@ static int allocate(int Nparticles, int countOnes){
 	}
 
 	// read the kernel core source
-	char * tempchar = "./particle_naive.cl";
+	const char *tempchar = "./particle_naive.cl";
 	FILE * fp = fopen(tempchar, "rb");
 	if (!fp) {
 		printf("ERROR: unable to open '%s'\n", tempchar);
 		return -1;
 	}
-	fread(source + strlen(source), sourcesize, 1, fp);
+	size_t read_size = fread(source, 1, (size_t)sourcesize - 1, fp);
+	if (read_size == 0 && ferror(fp)) {
+		printf("ERROR: unable to read '%s'\n", tempchar);
+		fclose(fp);
+		free(source);
+		return -1;
+	}
 	fclose(fp);
 
 	// OpenCL initialization
-	int use_gpu = 1;
-	if (initialize(use_gpu)) return -1;
+	int use_gpu =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		0;
+#else
+		1;
+#endif
+	if (initialize(use_gpu)) {
+		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
+		return -1;
+	}
 
 	// compile kernel
 	cl_int err = 0;
@@ -487,7 +540,7 @@ static int allocate(int Nparticles, int countOnes){
 		return -1;
 	}
 
-	char * particle_kernel = "particle_kernel";
+	const char *particle_kernel = "particle_kernel";
 
 	kernel_s = clCreateKernel(prog, particle_kernel, &err);
 	if (err != CL_SUCCESS) {
@@ -537,8 +590,7 @@ static int allocate(int Nparticles, int countOnes){
 	u_GPU = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof (double) *Nparticles, NULL, &err);
 	if (err != CL_SUCCESS) { printf("ERROR: clCreateBuffer u_GPU (size:%d) => %d\n", Nparticles, err); return -1; }
 
-  
-
+	return 0;
 }//eo allocate
 
 /**
@@ -587,7 +639,12 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
 	//initial likelihood to 0.0
 
 	//allocate all of the memory for the computation 
-	allocate(Nparticles, countOnes);
+	if (allocate(Nparticles, countOnes) != 0) {
+		free(weights);
+		free(objxy);
+		free(disk);
+		return -1;
+	}
 	
 	for (x = 0; x < Nparticles; x++) {
 		arrayX[x] = xe;
@@ -705,7 +762,7 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
 
 
 		//KERNEL FUNCTION CALL
-		size_t global_work[3] = {num_blocks*threads_per_block, 1, 1};
+		size_t global_work[3] = {(size_t)num_blocks * (size_t)threads_per_block, 1, 1};
 		err = clEnqueueNDRangeKernel(cmd_queue, kernel_s, 1, NULL, global_work, NULL, 0, 0, 0);
 		clFinish(cmd_queue);
 		long long start_copy_back = get_time();
@@ -768,11 +825,12 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
     free(CDF);
     free(u);
     free(ind);
+    return 0;
 }
 
 int main(int argc, char * argv[]) {
 
-    char* usage = "naive.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
+    const char* usage = "naive.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
     //check number of arguments
     if (argc != 9) {
         printf("%s\n", usage);

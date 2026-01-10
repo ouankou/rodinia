@@ -164,9 +164,15 @@ int main(int argc, char** argv) {
 	if (error != CL_SUCCESS) fatal_CL(error, __LINE__);
 	printf("Platform: %s\n", pbuf);
 	
-	// Create a GPU context
+	// Create a context for the selected device type
 	cl_context_properties context_properties[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties) platform, 0};
-    context = clCreateContextFromType(context_properties, CL_DEVICE_TYPE_GPU, NULL, NULL, &error);
+	cl_device_type device_type =
+#ifdef RODINIA_OPENCL_FORCE_CPU
+		CL_DEVICE_TYPE_CPU;
+#else
+		CL_DEVICE_TYPE_GPU;
+#endif
+    context = clCreateContextFromType(context_properties, device_type, NULL, NULL, &error);
     if (error != CL_SUCCESS) fatal_CL(error, __LINE__);
 	
 	// Get and print the chosen device (if there are multiple devices, choose the first one)
@@ -182,7 +188,8 @@ int main(int argc, char** argv) {
 	printf("Device: %s\n", pbuf);
 	
 	// Create a command queue
-	command_queue = clCreateCommandQueue(context, device, 0, &error);
+	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
+	command_queue = clCreateCommandQueueWithProperties(context, device, queue_props, &error);
     if (error != CL_SUCCESS) fatal_CL(error, __LINE__);
 	
 	

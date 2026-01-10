@@ -27,6 +27,7 @@
 
 #include        <stdio.h>
 #include        <ctype.h>
+#include        <unistd.h>
 #include        "zmatrix.h"
 
 static char rcsid[] = "$Id: zmatio.c,v 1.1 1994/01/13 04:25:18 des Exp $";
@@ -147,7 +148,8 @@ ZMAT     *izm_finput(FILE *fp, ZMAT *mat)
 #endif	
 				&mat->me[i][j].re,&mat->me[i][j].im)<1 );
 	  fprintf(stderr,"Continue: ");
-	  fscanf(fp,"%c",&c);
+	  if (fscanf(fp, "%c", &c) != 1)
+	       error(E_INPUT,"izm_finput");
 	  if ( c == 'n' || c == 'N' )
 	  {    dynamic = FALSE;                 goto redo;      }
 	  if ( (c == 'b' || c == 'B') /* && i > 0 */ )
@@ -446,4 +448,3 @@ void    zv_dump(FILE *fp,ZVEC *x)
      }
      if ( tmp % 2 != 0 )        putc('\n',fp);
 }
-

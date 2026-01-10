@@ -35,7 +35,9 @@ int main(int argc, char ** argv) {
 	// Transfer precomputed constants to the GPU
 	compute_constants();
 	
-	int i, j, *crow, *ccol, pair_counter = 0, x_result_len = 0, Iter = 20, ns = 4, k_count = 0, n;
+	int i, j, *crow, *ccol, Iter = 20, ns = 4, k_count = 0;
+	size_t pair_counter = 0;
+	size_t x_result_len = 0;
 	MAT *cellx, *celly, *A;
 	double *GICOV_spots, *t, *G, *x_result, *y_result, *V, *QAX_CENTERS, *QAY_CENTERS;
 	double threshold = 1.8, radius = 10.0, delta = 3.0, dt = 0.01, b = 5.0;
@@ -62,8 +64,9 @@ int main(int argc, char ** argv) {
 	
 	// Find possible matches for cell centers based on GICOV and record the rows/columns in which they are found
 	pair_counter = 0;
-	crow = (int *) malloc(gicov->m * gicov->n * sizeof(int));
-	ccol = (int *) malloc(gicov->m * gicov->n * sizeof(int));
+	size_t gicov_count = (size_t)gicov->m * (size_t)gicov->n;
+	crow = (int *) malloc(gicov_count * sizeof(int));
+	ccol = (int *) malloc(gicov_count * sizeof(int));
 	for(i = 0; i < gicov->m; i++) {
 		for(j = 0; j < gicov->n; j++) {
 			if(!double_eq(m_get_val(gicov,i,j), 0.0) && double_eq(m_get_val(img_dilated,i,j), m_get_val(gicov,i,j)))
@@ -76,19 +79,19 @@ int main(int argc, char ** argv) {
 	}
 
 	GICOV_spots = (double *) malloc(sizeof(double) * pair_counter);
-	for(i = 0; i < pair_counter; i++)
-		GICOV_spots[i] = sqrt(m_get_val(gicov, crow[i], ccol[i]));
+	for(size_t idx = 0; idx < pair_counter; idx++)
+		GICOV_spots[idx] = sqrt(m_get_val(gicov, crow[idx], ccol[idx]));
 	
 	G = (double *) calloc(pair_counter, sizeof(double));
 	x_result = (double *) calloc(pair_counter, sizeof(double));
 	y_result = (double *) calloc(pair_counter, sizeof(double));
 	
 	x_result_len = 0;
-	for (i = 0; i < pair_counter; i++) {
-		if ((crow[i] > 29) && (crow[i] < BOTTOM - TOP + 39)) {
-			x_result[x_result_len] = ccol[i];
-			y_result[x_result_len] = crow[i] - 40;
-			G[x_result_len] = GICOV_spots[i];
+	for (size_t idx = 0; idx < pair_counter; idx++) {
+		if ((crow[idx] > 29) && (crow[idx] < BOTTOM - TOP + 39)) {
+			x_result[x_result_len] = ccol[idx];
+			y_result[x_result_len] = crow[idx] - 40;
+			G[x_result_len] = GICOV_spots[idx];
 			x_result_len++;
 		}
 	}
@@ -100,12 +103,12 @@ int main(int argc, char ** argv) {
 	}
 	
 	// Store cell boundaries (as simple circles) for all cells
-	cellx = m_get(x_result_len, 36);
-	celly = m_get(x_result_len, 36);
-	for(i = 0; i < x_result_len; i++) {
+	cellx = m_get((int)x_result_len, 36);
+	celly = m_get((int)x_result_len, 36);
+	for(size_t idx = 0; idx < x_result_len; idx++) {
 		for(j = 0; j < 36; j++) {
-			m_set_val(cellx, i, j, x_result[i] + radius * cos(t[j]));
-			m_set_val(celly, i, j, y_result[i] + radius * sin(t[j]));
+			m_set_val(cellx, (int)idx, j, x_result[idx] + radius * cos(t[j]));
+			m_set_val(celly, (int)idx, j, y_result[idx] + radius * sin(t[j]));
 		}
 	}
 	
@@ -119,7 +122,7 @@ int main(int argc, char ** argv) {
 
 	// For all possible results, find the ones that are feasibly leukocytes and store their centers
 	k_count = 0;
-	for (n = 0; n < x_result_len; n++) {
+	for (size_t n = 0; n < x_result_len; n++) {
 		if ((G[n] < -1 * threshold) || G[n] > threshold) {
 			MAT * x, *y;
 			VEC * x_row, * y_row;
@@ -130,8 +133,8 @@ int main(int argc, char ** argv) {
 			y_row = v_get(36);
 
 			// Get current values of possible cells from cellx/celly matrices
-			x_row = get_row(cellx, n, x_row);
-			y_row = get_row(celly, n, y_row);
+			x_row = get_row(cellx, (int)n, x_row);
+			y_row = get_row(celly, (int)n, y_row);
 			uniformseg(x_row, y_row, x, y);
 
 			// Make sure that the possible leukocytes are not too close to the edge of the frame
