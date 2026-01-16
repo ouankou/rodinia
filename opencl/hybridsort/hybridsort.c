@@ -6,6 +6,7 @@
 #endif
 #include <fcntl.h>
 #include <float.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -129,8 +130,18 @@ int main(int argc, char** argv)
         fclose(fp);
 	}
     FILE *tp;
-    const char filename2[]="./hybridinput.txt";
-    tp = fopen(filename2,"w");
+    const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+    const char *filename2 = "hybridinput.txt";
+    char input_path[PATH_MAX];
+    if (output_dir && output_dir[0] != '\0') {
+        int written = snprintf(input_path, sizeof(input_path), "%s/%s", output_dir, filename2);
+        if (written > 0 && (size_t)written < sizeof(input_path)) {
+            filename2 = input_path;
+        } else {
+            fprintf(stderr, "Warning: output path too long, using %s\n", filename2);
+        }
+    }
+    tp = fopen(filename2, "w");
     for(int i = 0; i < SIZE; i++) {
         fprintf(tp,"%f ",cpu_idata[i]);
     }
@@ -199,8 +210,17 @@ int main(int argc, char** argv)
     
 #ifdef OUTPUT
     FILE *tp1;
-    const char filename3[]="./hybridoutput.txt";
-    tp1 = fopen(filename3,"w");
+    const char *filename3 = "hybridoutput.txt";
+    char output_path[PATH_MAX];
+    if (output_dir && output_dir[0] != '\0') {
+        int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename3);
+        if (written > 0 && (size_t)written < sizeof(output_path)) {
+            filename3 = output_path;
+        } else {
+            fprintf(stderr, "Warning: output path too long, using %s\n", filename3);
+        }
+    }
+    tp1 = fopen(filename3, "w");
     for(int i = 0; i < SIZE; i++) {
         fprintf(tp1,"%f ",cpu_idata[i]);
     }
@@ -216,5 +236,4 @@ int main(int argc, char** argv)
 //    printf("%d \n", summy);
     return 0;
 }
-
 

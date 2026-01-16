@@ -224,8 +224,8 @@ void select_device() {
 	
 	// Make sure at least one platform is available
 	if (num_platforms == 0) {
-		printf("Error: No OpenCL platforms available\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "FATAL: No OpenCL platforms available\n");
+		exit(1);
 	}
 	
 	// Get the list of platforms
@@ -239,12 +239,7 @@ void select_device() {
 	
 		// Create an OpenCL context
 		cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties) platform_ids[i], 0};
-		cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-			CL_DEVICE_TYPE_CPU;
-#else
-			CL_DEVICE_TYPE_GPU;
-#endif
+		cl_device_type device_type = CL_DEVICE_TYPE_GPU;
 		context = clCreateContextFromType(ctxprop, device_type, NULL, NULL, &error);
 		// If this platform has no GPU, try the next one
 		if (error == CL_DEVICE_NOT_FOUND) continue;

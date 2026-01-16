@@ -1,5 +1,8 @@
 #include "track_ellipse.h"
 #include "track_ellipse_opencl.h"
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np, int Nf) {
@@ -188,7 +191,18 @@ void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np,
 		if (frame_num == Nf)
 		  {
 		    FILE * pFile;
-		    pFile = fopen ("result.txt","w+");
+		    const char *output_path = "result.txt";
+		    char output_full[PATH_MAX];
+		    const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+		    if (output_dir && output_dir[0] != '\0') {
+		      int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+		      if (written > 0 && (size_t)written < sizeof(output_full)) {
+		        output_path = output_full;
+		      } else {
+		        fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+		      }
+		    }
+		    pFile = fopen(output_path, "w+");
 	
 		    for (cell_num = 0; cell_num < Nc; cell_num++)		
 		      fprintf(pFile,"\n%d,%f,%f", cell_num, xci[cell_num], yci[cell_num]);

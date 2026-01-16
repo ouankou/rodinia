@@ -7,6 +7,7 @@
 #define _CL_HELPER_
 
 #include <CL/cl.h>
+#include <cstdlib>
 #include <vector>
 #include <iostream>
 #include <fstream>
@@ -17,6 +18,24 @@ using std::ifstream;
 using std::cerr;
 using std::endl;
 using std::cout;
+
+inline string rodinia_output_path(const char *filename) {
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return string(filename);
+	}
+	string path(output_dir);
+	if (!path.empty() && path[path.size() - 1] != '/') {
+		path += "/";
+	}
+	path += filename;
+	return path;
+}
+
+inline void rodinia_fatal(const char *msg) {
+	cerr << "FATAL: " << msg << endl;
+	exit(1);
+}
 //#pragma OPENCL EXTENSION cl_nv_compiler_options:enable
 #define WORK_DIM 2	//work-items dimensions
 
@@ -149,17 +168,17 @@ void _clInit()
 
     resultCL = clGetPlatformIDs(0, NULL, &numPlatforms);
     if (resultCL != CL_SUCCESS)
-        throw (string("InitCL()::Error: Getting number of platforms (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: Getting number of platforms (clGetPlatformIDs)");
     //printf("number of platforms:%d\n",numPlatforms);	//by cambine
 
     if (!(numPlatforms > 0))
-        throw (string("InitCL()::Error: No platforms found (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: No platforms found (clGetPlatformIDs)");
 
     cl_platform_id* allPlatforms = (cl_platform_id*) malloc(numPlatforms * sizeof(cl_platform_id));
 
     resultCL = clGetPlatformIDs(numPlatforms, allPlatforms, NULL);
     if (resultCL != CL_SUCCESS)
-        throw (string("InitCL()::Error: Getting platform ids (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: Getting platform ids (clGetPlatformIDs)");
 
     /* Select the target platform. Default: first platform */
     targetPlatform = allPlatforms[0];
@@ -182,12 +201,7 @@ void _clInit()
     //-----------------------------------------------
     //--cambine-2: create an OpenCL context
     cl_context_properties cprops[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties)targetPlatform, 0 };
-    cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-        CL_DEVICE_TYPE_CPU;
-#else
-        CL_DEVICE_TYPE_GPU;
-#endif
+    cl_device_type device_type = CL_DEVICE_TYPE_GPU;
     oclHandles.context = clCreateContextFromType(cprops, 
                                                 device_type, 
                                                 NULL, 
@@ -195,16 +209,14 @@ void _clInit()
                                                 &resultCL);
 
     if ((resultCL != CL_SUCCESS) || (oclHandles.context == NULL))
-        throw (string("InitCL()::Error: Creating Context (clCreateContextFromType)"));
+        rodinia_fatal("InitCL()::Error: Creating Context (clCreateContextFromType)");
     //-----------------------------------------------
     //--cambine-3: detect OpenCL devices	
     /* First, get the size of device list */
    oclHandles.cl_status = clGetDeviceIDs(targetPlatform, device_type, 0, NULL, &deviceListSize);
-   if(oclHandles.cl_status!=CL_SUCCESS){
-   	throw(string("exception in _clInit -> clGetDeviceIDs"));   	
+   if(oclHandles.cl_status!=CL_SUCCESS || deviceListSize == 0){
+		rodinia_fatal("No OpenCL GPU devices found");
    }
-   if (deviceListSize == 0)
-        throw(string("InitCL()::Error: No devices found."));
 
     //std::cout<<"device number:"<<deviceListSize<<std::endl;
 
@@ -300,7 +312,8 @@ void _clInit()
     for(int i=0;i<deviceListSize;i++)
       binaries[i][binary_sizes[i]] = '\0';
     std::cout<<"--cambine:writing ptd information..."<<std::endl;
-    FILE * ptx_file = fopen("cl.ptx","w");
+    string ptx_path = rodinia_output_path("cl.ptx");
+    FILE * ptx_file = fopen(ptx_path.c_str(),"w");
     if(ptx_file==NULL){
 	throw(string("exceptions in allocate ptx file."));
     }

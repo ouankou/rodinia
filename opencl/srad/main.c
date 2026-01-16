@@ -19,6 +19,7 @@
 #include <stdlib.h>									// (in path known to compiler)	needed by malloc, free
 #include <sys/stat.h>								// (in path known to compiler)	needed by mkdir/stat
 #include <errno.h>									// (in path known to compiler)	needed by errno
+#include <limits.h>								// (in path known to compiler)	needed by PATH_MAX
 
 //======================================================================================================================================================150
 //	HEADER
@@ -122,6 +123,18 @@ main(	int argc,
 		if (argc == 6) {
 			output_path = argv[5];
 			output_is_default = 0;
+		}
+	}
+	if (output_is_default) {
+		const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+		char output_full[PATH_MAX];
+		if (output_dir && output_dir[0] != '\0') {
+			int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, "image_out.pgm");
+			if (written > 0 && (size_t)written < sizeof(output_full)) {
+				output_path = output_full;
+			} else {
+				fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+			}
 		}
 	}
 

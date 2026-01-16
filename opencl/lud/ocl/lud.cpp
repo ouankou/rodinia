@@ -49,36 +49,50 @@ static cl_device_type   device_type;
 static cl_device_id   * device_list;
 static cl_uint           num_devices;
 
-static int initialize(int use_gpu)
+static void fatal_init(const char *msg)
+{
+	fprintf(stderr, "FATAL: %s\n", msg);
+	exit(1);
+}
+
+static void initialize()
 {
 	cl_int result;
 	size_t size;
 
 	// create OpenCL context
 	cl_platform_id platform_id;
-	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { printf("ERROR: clGetPlatformIDs(1,*,0) failed\n"); return -1; }
-	device_type = use_gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
+	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) {
+		fatal_init("clGetPlatformIDs(1,*,0) failed");
+	}
+	device_type = CL_DEVICE_TYPE_GPU;
 
 	result = clGetDeviceIDs(platform_id, device_type, 0, NULL, &num_devices);
 	if (result != CL_SUCCESS || num_devices < 1) {
-		printf("ERROR: clGetDeviceIDs() failed\n");
-		return -1;
+		fatal_init("No OpenCL GPU devices found");
 	}
 
 	device_list = new cl_device_id[num_devices];
-	if( !device_list ) { printf("ERROR: new cl_device_id[] failed\n"); return -1; }
+	if( !device_list ) {
+		fatal_init("new cl_device_id[] failed");
+	}
 	result = clGetDeviceIDs(platform_id, device_type, num_devices, device_list, NULL);
-	if( result != CL_SUCCESS ) { printf("ERROR: clGetDeviceIDs() failed\n"); return -1; }
+	if( result != CL_SUCCESS ) {
+		fatal_init("clGetDeviceIDs() failed");
+	}
 
 	context = clCreateContext( NULL, num_devices, device_list, NULL, NULL, &result );
-	if( result != CL_SUCCESS || !context ) { printf("ERROR: clCreateContext() failed\n"); return -1; }
+	if( result != CL_SUCCESS || !context ) {
+		fatal_init("clCreateContext() failed");
+	}
 	printf("num_devices = %d\n", num_devices);
 
 	// create command queue for the first device
 	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
 	cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
-	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueueWithProperties() failed\n"); return -1; }
-	return 0;
+	if( !cmd_queue ) {
+		fatal_init("clCreateCommandQueueWithProperties() failed");
+	}
 }
 
 static int shutdown()
@@ -232,19 +246,8 @@ main ( int argc, char *argv[] )
 	source[fsize] = '\0';
 	fclose(fp);
 
-	// Use 1: GPU  0: CPU
-	int use_gpu =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-		0;
-#else
-		1;
-#endif
 	// OpenCL initialization
-	if (initialize(use_gpu)) {
-		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
-		free(source);
-		return -1;
-	}
+	initialize();
 	// compile kernel
 	cl_int err = 0;
 	const char * slist[2] = { source, 0 };

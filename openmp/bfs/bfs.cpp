@@ -2,6 +2,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <omp.h>
 //#define NUM_THREAD 4
 #define OPEN
@@ -192,14 +193,25 @@ void BFSGraph( int argc, char** argv)
         printf("Compute time: %lf\n", (end_time - start_time));
 #ifdef OMP_OFFLOAD
         }
-#endif
+	#endif
 #endif
 	//Store the result into a file
-	FILE *fpo = fopen("result.txt","w");
+	const char *output_path = "result.txt";
+	char output_full[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+		if (written > 0 && (size_t)written < sizeof(output_full)) {
+			output_path = output_full;
+		} else {
+			fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+		}
+	}
+	FILE *fpo = fopen(output_path,"w");
 	for(int i=0;i<no_of_nodes;i++)
 		fprintf(fpo,"%d) cost:%d\n",i,h_cost[i]);
 	fclose(fpo);
-	printf("Result stored in result.txt\n");
+	printf("Result stored in %s\n", output_path);
 
 
 	// cleanup memory

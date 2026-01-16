@@ -7,7 +7,9 @@
 #define _CL_HELPER_
 
 #include <CL/cl.h>
+#include <cstdlib>
 #include <vector>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -18,6 +20,24 @@ using std::ifstream;
 using std::cerr;
 using std::endl;
 using std::cout;
+
+inline string rodinia_output_path(const char *filename) {
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return string(filename);
+	}
+	string path(output_dir);
+	if (!path.empty() && path[path.size() - 1] != '/') {
+		path += "/";
+	}
+	path += filename;
+	return path;
+}
+
+inline void rodinia_fatal(const char *msg) {
+	cerr << "FATAL: " << msg << endl;
+	exit(1);
+}
 
 #define PROFILE_
 #ifdef PROFILE_
@@ -135,33 +155,28 @@ void _clSetDevice(int idx){
 
     resultCL = clGetPlatformIDs(0, NULL, &numPlatforms);
     if (resultCL != CL_SUCCESS)
-        throw (string("InitCL()::Error: Getting number of platforms (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: Getting number of platforms (clGetPlatformIDs)");
 
     if (!(numPlatforms > 0))
-        throw (string("InitCL()::Error: No platforms found (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: No platforms found (clGetPlatformIDs)");
 
     cl_platform_id* allPlatforms = (cl_platform_id*) malloc(numPlatforms * sizeof(cl_platform_id));
 
     resultCL = clGetPlatformIDs(numPlatforms, allPlatforms, NULL);
     if (resultCL != CL_SUCCESS)
-        throw (string("InitCL()::Error: Getting platform ids (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: Getting platform ids (clGetPlatformIDs)");
 
     /* Select the target platform. Default: first platform */
     targetPlatform = allPlatforms[0];
     free(allPlatforms);
 
-   cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-	   CL_DEVICE_TYPE_CPU;
-#else
-	   CL_DEVICE_TYPE_GPU;
-#endif
+   cl_device_type device_type = CL_DEVICE_TYPE_GPU;
    oclHandles.cl_status = clGetDeviceIDs(targetPlatform, device_type, 0, NULL, &deviceListSize);
    if(oclHandles.cl_status!=CL_SUCCESS){
-   	throw(string("exception in _clInit -> clGetDeviceIDs"));   	
+	   rodinia_fatal("No OpenCL GPU devices found");
    }
    if (deviceListSize == 0)
-        throw(string("InitCL()::Error: No devices found."));
+        rodinia_fatal("No OpenCL GPU devices found");
    
    if(idx>(deviceListSize-1))
 	  throw(string(":invalid device ID:"));
@@ -253,11 +268,15 @@ string FileToString(const string fileName){
 char device_type[8];
 int device_id = 0;
 void _clCmdParams(int argc, char* argv[]){
+	bool device_type_set = false;
+	device_type[0] = '\0';
 	for (int i = 0; i < argc; ++i){
 		switch (argv[i][1]){
-			case 't':	//--t stands for device type
+			case 't':	//--t stands for device type (gpu only)
 				if (++i < argc){
-					sscanf(argv[i], "%7s", device_type);
+					std::strncpy(device_type, argv[i], sizeof(device_type) - 1);
+					device_type[sizeof(device_type) - 1] = '\0';
+					device_type_set = true;
 				}
 				else{
 					std::cerr << "Could not read argument after option " << argv[i-1] << std::endl;
@@ -273,30 +292,27 @@ void _clCmdParams(int argc, char* argv[]){
 					throw;
 				}
 				break;
-			default:
-				;
+		default:
+			;
 		}
 	}
-#ifdef RODINIA_OPENCL_FORCE_CPU
-	device_type[0] = 'c';
-	device_type[1] = 'p';
-	device_type[2] = 'u';
-	device_type[3] = '\0';
-#else
+	if (device_type_set && string(device_type) != "gpu") {
+		std::cerr << "FATAL: only OpenCL GPU devices are supported (use -t gpu)\n";
+		exit(1);
+	}
 	device_type[0] = 'g';
 	device_type[1] = 'p';
 	device_type[2] = 'u';
 	device_type[3] = '\0';
-#endif
 }
 
 /*------------------------------------------------------------
 	@function:	Initlize CL objects
 	@params:	
 		device_id: device id
-		device_type: the types of devices, e.g. CPU, GPU, ACCERLERATOR,...	
-		(1) -t cpu/gpu/acc -d 0/1/2/...
-		(2) -t cpu/gpu/acc [-d 0]
+		device_type: the type of device (gpu only)
+		(1) -t gpu -d 0/1/2/...
+		(2) -t gpu [-d 0]
 		(3) [-t default] -d 0/1/2/...
 		(4) NULL [-d 0]
 	@return:
@@ -307,6 +323,7 @@ void _clCmdParams(int argc, char* argv[]){
 	@date:		24/03/2011
 ------------------------------------------------------------*/
 void _clInit(string device_type, int device_id){
+	(void)device_type;
 
 #ifdef PROFILE_
 	TE = 0;
@@ -333,12 +350,7 @@ void _clInit(string device_type, int device_id){
     oclHandles.program = NULL;
 
     cl_uint deviceListSize;
-	cl_device_type default_device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-		CL_DEVICE_TYPE_CPU;
-#else
-		CL_DEVICE_TYPE_GPU;
-#endif
+	cl_device_type requested_type = CL_DEVICE_TYPE_GPU;
     //-----------------------------------------------
     //--cambine-1: find the available platforms and select one
 
@@ -347,20 +359,20 @@ void _clInit(string device_type, int device_id){
 
     resultCL = clGetPlatformIDs(0, NULL, &numPlatforms);
     if (resultCL != CL_SUCCESS)
-        throw (string("InitCL()::Error: Getting number of platforms (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: Getting number of platforms (clGetPlatformIDs)");
     //printf("number of platforms:%d\n",numPlatforms);	//by cambine
 #ifdef	DEV_INFO
 	std::cout<<"--cambine: number of platforms: "<<numPlatforms<<std::endl;
 #endif
 
     if (!(numPlatforms > 0))
-        throw (string("InitCL()::Error: No platforms found (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: No platforms found (clGetPlatformIDs)");
 
     cl_platform_id* allPlatforms = (cl_platform_id*) malloc(numPlatforms * sizeof(cl_platform_id));
 
     resultCL = clGetPlatformIDs(numPlatforms, allPlatforms, NULL);
     if (resultCL != CL_SUCCESS)
-        throw (string("InitCL()::Error: Getting platform ids (clGetPlatformIDs)"));
+        rodinia_fatal("InitCL()::Error: Getting platform ids (clGetPlatformIDs)");
 
     // Select the target platform. Default: first platform 
     targetPlatform = allPlatforms[0];
@@ -385,31 +397,9 @@ void _clInit(string device_type, int device_id){
     //-----------------------------------------------
     //--cambine-2: detect OpenCL devices	
     // First, get the size of device list 
-    if(device_type.compare("")!=0){
-		if(device_type.compare("cpu")==0){
-		   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_CPU, 0, NULL, &deviceListSize);
-		   if(oclHandles.cl_status!=CL_SUCCESS){
-			   throw(string("exception in _clInit -> clGetDeviceIDs -> CPU"));   				
-	       }
-		}	
-		if(device_type.compare("gpu")==0){		   
-		   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_GPU, 0, NULL, &deviceListSize);
-		   if(oclHandles.cl_status!=CL_SUCCESS){
-			   throw(string("exception in _clInit -> clGetDeviceIDs -> GPU"));   	
-	       }
-		}
-		if(device_type.compare("acc")==0){
-		   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_ACCELERATOR, 0, NULL, &deviceListSize);
-		   if(oclHandles.cl_status!=CL_SUCCESS){
-			   throw(string("exception in _clInit -> clGetDeviceIDs -> ACCELERATOR"));   	
-	       }
-		}	 	
-    }
-    else{
-	   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, default_device_type, 0, NULL, &deviceListSize);
-		   if(oclHandles.cl_status!=CL_SUCCESS){
-			   throw(string("exception in _clInit -> clGetDeviceIDs -> ALL"));   	
-	       }
+    oclHandles.cl_status = clGetDeviceIDs(targetPlatform, requested_type, 0, NULL, &deviceListSize);
+    if(oclHandles.cl_status!=CL_SUCCESS){
+        throw(string("exception in _clInit -> clGetDeviceIDs -> GPU"));
     }
     
    if (deviceListSize == 0)
@@ -427,32 +417,10 @@ void _clInit(string device_type, int device_id){
         throw(string("InitCL()::Error: Could not allocate memory."));
 
     // Next, get the device list data 
-	if(device_type.compare("")!=0){
-	   if(device_type.compare("cpu")==0){
-		   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_CPU, deviceListSize, oclHandles.devices, NULL);
-		   if(oclHandles.cl_status!=CL_SUCCESS){
-		   		throw(string("exception in _clInit -> clGetDeviceIDs -> CPU ->2"));   		   	
-	   	   }
-	   }
-   	   if(device_type.compare("gpu")==0){
-		   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_GPU, deviceListSize, oclHandles.devices, NULL);
-		   if(oclHandles.cl_status!=CL_SUCCESS){
-		   	throw(string("exception in _clInit -> clGetDeviceIDs -> GPU -> 2"));   		   	
-	   	   }
-   	 	}
-   	   if(device_type.compare("acc")==0){
-		   oclHandles.cl_status = clGetDeviceIDs(targetPlatform, CL_DEVICE_TYPE_ACCELERATOR, deviceListSize, oclHandles.devices, NULL);
-		   if(oclHandles.cl_status!=CL_SUCCESS){
-		   	throw(string("exception in _clInit -> clGetDeviceIDs -> ACCELERATOR -> 2"));   		   	
-	   	   }
-   	   }  	 	
-   	}
-   	else{
-	   	 oclHandles.cl_status = clGetDeviceIDs(targetPlatform, default_device_type, deviceListSize, oclHandles.devices, NULL);
-	   	 if(oclHandles.cl_status!=CL_SUCCESS){
-	   	 	throw(string("exception in _clInit -> clGetDeviceIDs -> ALL -> 2"));   		   	
-   	   	}
-   	}
+	oclHandles.cl_status = clGetDeviceIDs(targetPlatform, requested_type, deviceListSize, oclHandles.devices, NULL);
+	if(oclHandles.cl_status!=CL_SUCCESS){
+		rodinia_fatal("exception in _clInit -> clGetDeviceIDs -> GPU -> 2");
+	}
    if(device_id!=0){
    	if(device_id>(deviceListSize-1))
    		throw(string("Invalidate device id"));
@@ -542,7 +510,8 @@ void _clInit(string device_type, int device_id){
             throw(string("InitCL()::Error: Getting Program build info(clGetProgramBuildInfo)"));
 
 		cerr << buffer << endl;
-		FILE * fp = fopen("errinfo", "w");
+		string errinfo_path = rodinia_output_path("errinfo");
+		FILE * fp = fopen(errinfo_path.c_str(), "w");
 		fprintf(fp, "%s\n", buffer);
 		fclose(fp);
         free(buffer);
@@ -574,7 +543,8 @@ void _clInit(string device_type, int device_id){
     for(int i=0;i<deviceListSize;i++)
       binaries[i][binary_sizes[i]] = '\0';
     std::cout<<"--cambine:writing ptd information..."<<std::endl;
-    FILE * ptx_file = fopen("cl.ptx","w");
+    string ptx_path = rodinia_output_path("cl.ptx");
+    FILE * ptx_file = fopen(ptx_path.c_str(), "w");
     if(ptx_file==NULL){
 	throw(string("exceptions in allocate ptx file."));
     }
@@ -1436,7 +1406,8 @@ void _clFree(cl_mem ob){
 ------------------------------------------------------------*/
 void _clStatistics(){
 #ifdef PROFILE_
-	FILE *fp_pd = fopen("PD_OCL.txt", "a");
+	string pd_path = rodinia_output_path("PD_OCL.txt");
+	FILE *fp_pd = fopen(pd_path.c_str(), "a");
 	fprintf(fp_pd, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf\n", CC, CR, MA, MF, H2D, D2H, D2D, KE, KC);
 	fclose(fp_pd);
 #endif	

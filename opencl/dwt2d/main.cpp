@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 #include <sys/time.h>
 #include <getopt.h>
 #include <iostream>
@@ -65,19 +66,14 @@ cl_context CreateContext()
 
     if (platformIdCount == 0)
     {
-        std::cerr << "No OpenCL platforms found." << std::endl;
-        return NULL;
+        std::cerr << "FATAL: No OpenCL platforms found." << std::endl;
+        exit(1);
     }
 
     std::vector<cl_platform_id> platformIds(platformIdCount);
     clGetPlatformIDs(platformIdCount, platformIds.data(), NULL);
 
-    cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-        CL_DEVICE_TYPE_CPU;
-#else
-        CL_DEVICE_TYPE_GPU;
-#endif
+    cl_device_type device_type = CL_DEVICE_TYPE_GPU;
 
     for (cl_uint i = 0; i < platformIdCount; ++i)
     {
@@ -95,9 +91,8 @@ cl_context CreateContext()
         }
     }
 
-    const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
-    std::cerr << "Failed to create an OpenCL " << device_label << " context." << std::endl;
-    return NULL;
+    std::cerr << "FATAL: Failed to create an OpenCL GPU context." << std::endl;
+    exit(1);
 
 }
 
@@ -280,7 +275,7 @@ void usage() {
 void fatal_CL(cl_int error, int line_no)
 {
 
-	printf("At line %d: ", line_no);
+	fprintf(stderr, "FATAL: OpenCL error at line %d: ", line_no);
 
 	switch(error) {
 
@@ -340,6 +335,7 @@ void fatal_CL(cl_int error, int line_no)
 		default:											printf("Invalid OpenCL error code\n");
 
 	}
+	exit(1);
 }
 
 
@@ -1027,7 +1023,20 @@ int main(int argc, char **argv)
 	{ // only one filename supplyed
         d->outFilename = (char *)malloc(strlen(d->srcFilename) + 5);
         strcpy(d->outFilename, d->srcFilename);
-        strcpy(d->outFilename+strlen(d->srcFilename), ".dwt");
+        strcpy(d->outFilename + strlen(d->srcFilename), ".dwt");
+        const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+        if (output_dir && output_dir[0] != '\0') {
+            const char *base = strrchr(d->srcFilename, '/');
+            base = base ? base + 1 : d->srcFilename;
+            char output_full[PATH_MAX];
+            int written = snprintf(output_full, sizeof(output_full), "%s/%s.dwt", output_dir, base);
+            if (written > 0 && (size_t)written < sizeof(output_full)) {
+                free(d->outFilename);
+                d->outFilename = strdup(output_full);
+            } else {
+                std::cerr << "Warning: output path too long, using " << d->outFilename << std::endl;
+            }
+        }
     } else {
         d->outFilename = strdup(argv[first_arg + 1]);
     }

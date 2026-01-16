@@ -67,11 +67,16 @@ static cl_device_type device_type;
 static cl_device_id * device_list;
 static cl_int num_devices;
 
+static void fatal_init(const char *msg)
+{
+    fprintf(stderr, "FATAL: %s\n", msg);
+    exit(1);
+}
+
 /*
- * @brief sets up the OpenCL framework by detecting and initializing the available device
- * @param use_gpu flag denoting if the gpu is the desired platform
+ * @brief sets up the OpenCL framework by detecting and initializing a GPU device
  */
-static int initialize(int use_gpu) {
+static void initialize() {
     cl_int result;
     size_t size;
 
@@ -84,8 +89,7 @@ static int initialize(int use_gpu) {
     cl_int err = clGetPlatformIDs(2, platform_id, &num_avail);
     if (err != CL_SUCCESS) {
         if (err == CL_INVALID_VALUE)printf("clGetPlatformIDs() returned invalid_value\n");
-        printf("ERROR: clGetPlatformIDs(1,*,0) failed\n");
-        return -1;
+        fatal_init("clGetPlatformIDs(1,*,0) failed");
     }
     printf("number of available platforms:%d.\n",num_avail);
     char info[100];
@@ -93,7 +97,7 @@ static int initialize(int use_gpu) {
     printf("clGetPlatformInfo: %s\n", info);
 
     cl_context_properties ctxprop[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platform_id[0], 0};
-    device_type = use_gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
+    device_type = CL_DEVICE_TYPE_GPU;
     context = clCreateContextFromType(ctxprop, device_type, NULL, NULL, &err);
 
     if (!context) {
@@ -113,8 +117,7 @@ static int initialize(int use_gpu) {
             printf("CL_OUT_OF_RESOURCES returned by clCreateContextFromType()\n");
 
 
-        printf("ERROR: clCreateContextFromType(%s) failed\n", use_gpu ? "GPU" : "CPU");
-        return -1;
+        fatal_init("clCreateContextFromType(GPU) failed");
     }
 
     // get the list of GPUs
@@ -122,25 +125,21 @@ static int initialize(int use_gpu) {
     num_devices = (int) (size / sizeof (cl_device_id));
 
     if (result != CL_SUCCESS || num_devices < 1) {
-        printf("ERROR: clGetContextInfo() failed\n");
-        return -1;
+        fatal_init("No OpenCL GPU devices found");
     }
     device_list = new cl_device_id[num_devices];
     if (!device_list) {
-        printf("ERROR: new cl_device_id[] failed\n");
-        return -1;
+        fatal_init("new cl_device_id[] failed");
     }
     result = clGetContextInfo(context, CL_CONTEXT_DEVICES, size, device_list, NULL);
     if (result != CL_SUCCESS) {
-        printf("ERROR: clGetContextInfo() failed\n");
-        return -1;
+        fatal_init("clGetContextInfo() failed");
     }
     size_t max_work_item_sizes[3];
     result = clGetDeviceInfo(device_list[0], CL_DEVICE_MAX_WORK_ITEM_SIZES,
                 sizeof(max_work_item_sizes), (void*)max_work_item_sizes, NULL);
     if (result != CL_SUCCESS) {
-        printf("ERROR: clGetDeviceInfo() failed\n");
-        return -1;
+        fatal_init("clGetDeviceInfo() failed");
     }
   if (max_work_item_sizes[0] < threads_per_block)
     threads_per_block = max_work_item_sizes[0];
@@ -149,11 +148,8 @@ static int initialize(int use_gpu) {
     const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
     cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
     if (!cmd_queue) {
-        printf("ERROR: clCreateCommandQueueWithProperties() failed\n");
-        return -1;
+        fatal_init("clCreateCommandQueueWithProperties() failed");
     }
-
-    return 0;
 }
 
 /*
@@ -538,17 +534,7 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     fclose(fp);
 
     // OpenCL initialization
-    int use_gpu =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-        0;
-#else
-        1;
-#endif
-    if (initialize(use_gpu)) {
-        printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
-        free(source);
-        return -1;
-    }
+    initialize();
 
     // compile kernel
     cl_int err = 0;
@@ -972,8 +958,19 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
     float distance = sqrt(pow((float) (xe - (int) roundFloat(IszY / 2.0)), 2) + pow((float) (ye - (int) roundFloat(IszX / 2.0)), 2));
 
     //Output results
+    const char *output_path = "output.txt";
+    char output_full[PATH_MAX];
+    const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+    if (output_dir && output_dir[0] != '\0') {
+        int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+        if (written > 0 && (size_t)written < sizeof(output_full)) {
+            output_path = output_full;
+        } else {
+            fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+        }
+    }
     FILE *fid;
-    fid=fopen("output.txt", "w+");
+    fid=fopen(output_path, "w+");
     if( fid == NULL ){
       printf( "The file was not opened for writing\n" );
       return -1;

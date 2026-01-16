@@ -166,12 +166,7 @@ int main(int argc, char** argv) {
 	
 	// Create a context for the selected device type
 	cl_context_properties context_properties[3] = { CL_CONTEXT_PLATFORM, (cl_context_properties) platform, 0};
-	cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-		CL_DEVICE_TYPE_CPU;
-#else
-		CL_DEVICE_TYPE_GPU;
-#endif
+	cl_device_type device_type = CL_DEVICE_TYPE_GPU;
     context = clCreateContextFromType(context_properties, device_type, NULL, NULL, &error);
     if (error != CL_SUCCESS) fatal_CL(error, __LINE__);
 	
