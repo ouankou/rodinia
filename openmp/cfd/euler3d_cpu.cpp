@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <cstdlib>
 
 #ifdef OMP_OFFLOAD
 #pragma omp declare target
@@ -13,6 +15,19 @@
 #endif
 
 #include <omp.h>
+
+static std::string output_path(const char *filename) {
+	const char *output_dir = std::getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return std::string(filename);
+	}
+	std::string path(output_dir);
+	if (!path.empty() && path[path.size() - 1] != '/') {
+		path += "/";
+	}
+	path += filename;
+	return path;
+}
 
 struct float3 { float x, y, z; };
 
@@ -90,14 +105,14 @@ void dump(float* variables, int nel, int nelr)
 
 
 	{
-		std::ofstream file("density");
+		std::ofstream file(output_path("density").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++) file << variables[i + VAR_DENSITY*nelr] << std::endl;
 	}
 
 
 	{
-		std::ofstream file("momentum");
+		std::ofstream file(output_path("momentum").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++)
 		{
@@ -107,7 +122,7 @@ void dump(float* variables, int nel, int nelr)
 	}
 
 	{
-		std::ofstream file("density_energy");
+		std::ofstream file(output_path("density_energy").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++) file << variables[i + VAR_DENSITY_ENERGY*nelr] << std::endl;
 	}

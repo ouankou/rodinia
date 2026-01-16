@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <iostream>
 #include <string>
 #include <sys/time.h>
@@ -59,35 +60,52 @@ static cl_device_type   device_type;
 static cl_device_id   * device_list;
 static cl_int           num_devices;
 
-static int initialize(int use_gpu)
+static void fatal_init(const char *msg)
+{
+	fprintf(stderr, "FATAL: %s\n", msg);
+	exit(1);
+}
+
+static void initialize()
 {
 	cl_int result;
 	size_t size;
 
 	// create OpenCL context
 	cl_platform_id platform_id;
-	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) { printf("ERROR: clGetPlatformIDs(1,*,0) failed\n"); return -1; }
+	if (clGetPlatformIDs(1, &platform_id, NULL) != CL_SUCCESS) {
+		fatal_init("clGetPlatformIDs(1,*,0) failed");
+	}
 	cl_context_properties ctxprop[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id, 0};
-	device_type = use_gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU;
+	device_type = CL_DEVICE_TYPE_GPU;
 	context = clCreateContextFromType( ctxprop, device_type, NULL, NULL, NULL );
-	if( !context ) { printf("ERROR: clCreateContextFromType(%s) failed\n", use_gpu ? "GPU" : "CPU"); return -1; }
+	if( !context ) {
+		fatal_init("clCreateContextFromType(GPU) failed");
+	}
 
 	// get the list of GPUs
 	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, 0, NULL, &size );
 	num_devices = (int) (size / sizeof(cl_device_id));
 	printf("num_devices = %d\n", num_devices);
 	
-	if( result != CL_SUCCESS || num_devices < 1 ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
+	if( result != CL_SUCCESS || num_devices < 1 ) {
+		fatal_init("No OpenCL GPU devices found");
+	}
 	device_list = new cl_device_id[num_devices];
-	if( !device_list ) { printf("ERROR: new cl_device_id[] failed\n"); return -1; }
+	if( !device_list ) {
+		fatal_init("new cl_device_id[] failed");
+	}
 	result = clGetContextInfo( context, CL_CONTEXT_DEVICES, size, device_list, NULL );
-	if( result != CL_SUCCESS ) { printf("ERROR: clGetContextInfo() failed\n"); return -1; }
+	if( result != CL_SUCCESS ) {
+		fatal_init("clGetContextInfo() failed");
+	}
 
 	// create command queue for the first device
 	const cl_queue_properties queue_props[] = {CL_QUEUE_PROPERTIES, 0, 0};
 	cmd_queue = clCreateCommandQueueWithProperties(context, device_list[0], queue_props, NULL);
-	if( !cmd_queue ) { printf("ERROR: clCreateCommandQueueWithProperties() failed\n"); return -1; }
-	return 0;
+	if( !cmd_queue ) {
+		fatal_init("clCreateCommandQueueWithProperties() failed");
+	}
 }
 
 static int shutdown()
@@ -250,18 +268,8 @@ int main(int argc, char **argv){
 	size_t local_work[3] = { (size_t)((workgroupsize>0)?workgroupsize:1), 1, 1 };
 	size_t global_work[3] = { (size_t)nworkitems, 1, 1 }; //nworkitems = no. of GPU threads
 	
-	int use_gpu =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-		0;
-#else
-		1;
-#endif
 	// OpenCL initialization
-	if (initialize(use_gpu)) {
-		printf("ERROR: required OpenCL %s device not available\n", use_gpu ? "GPU" : "CPU");
-		free(source);
-		return -1;
-	}
+	initialize();
 
 	// compile kernel
 	cl_int err = 0;
@@ -376,8 +384,18 @@ int main(int argc, char **argv){
 
 //#define TRACEBACK	
 #ifdef TRACEBACK
-	
-	FILE *fpo = fopen("result.txt","w");
+	const char *output_path = "result.txt";
+	char output_full[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+		if (written > 0 && (size_t)written < sizeof(output_full)) {
+			output_path = output_full;
+		} else {
+			fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+		}
+	}
+	FILE *fpo = fopen(output_path,"w");
 	fprintf(fpo, "print traceback value GPU:\n");
     
 	for (int i = max_rows - 2,  j = max_rows - 2; i>=0, j>=0;){

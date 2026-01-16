@@ -41,7 +41,7 @@ void fatal(const char *s) {
 
 // Prints a string version of the specified OpenCL error code
 void fatal_CL(cl_int error, char *file, int line) {
-	printf("Error in %s at line %d: ", file, line);
+	printf("FATAL: OpenCL error in %s at line %d: ", file, line);
 	
 	// Print 
 	switch(error) {
@@ -102,7 +102,7 @@ void fatal_CL(cl_int error, char *file, int line) {
 		default:											printf("Invalid OpenCL error code\n");
 	}
 
-	exit(error);
+	exit(1);
 }
 
 void check_error(cl_int error, char *file, int line) {

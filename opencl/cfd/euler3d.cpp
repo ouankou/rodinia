@@ -90,14 +90,14 @@ void dump(cl_mem variables, int nel, int nelr){
 	download(h_variables, variables, nelr*NVAR);
 
 	{
-		std::ofstream file("density");
+		std::ofstream file(rodinia_output_path("density").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++) file << h_variables[i + VAR_DENSITY*nelr] << std::endl;
 	}
 
 
 	{
-		std::ofstream file("momentum");
+		std::ofstream file(rodinia_output_path("momentum").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++)
 		{
@@ -108,7 +108,7 @@ void dump(cl_mem variables, int nel, int nelr){
 	}
 	
 	{
-		std::ofstream file("density_energy");
+		std::ofstream file(rodinia_output_path("density_energy").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++) file << h_variables[i + VAR_DENSITY_ENERGY*nelr] << std::endl;
 	}
@@ -206,7 +206,7 @@ int main(int argc, char** argv){
   printf("WG size of kernel:initialize = %d, WG size of kernel:compute_step_factor = %d, WG size of kernel:compute_flux = %d, WG size of kernel:time_step = %d\n", BLOCK_SIZE_1, BLOCK_SIZE_2, BLOCK_SIZE_3, BLOCK_SIZE_4);
 
 	if (argc < 2){
-		std::cout << "specify data file name and [device type] [device id]" << std::endl;
+		std::cout << "specify data file name and [device id]" << std::endl;
 		return 0;
 	}
 	const char* data_file_name = argv[1];

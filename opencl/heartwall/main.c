@@ -14,6 +14,8 @@
 #include <stdlib.h>								// (in directory known to compiler)
 #include <math.h>								// (in directory known to compiler)
 #include <string.h>								// (in directory known to compiler)
+#include <stdio.h>								// (in directory known to compiler)
+#include <limits.h>								// (in directory known to compiler)
 
 //======================================================================================================================================================150
 //	MAIN FUNCTION HEADER
@@ -218,7 +220,18 @@ main(	int argc,
 	//	DUMP DATA TO FILE
 	//==================================================50
 #ifdef OUTPUT
-	write_data(	"result.txt",
+	const char *output_path = "result.txt";
+	char output_full[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+		if (written > 0 && (size_t)written < sizeof(output_full)) {
+			output_path = output_full;
+		} else {
+			fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+		}
+	}
+	write_data(	output_path,
 			common.no_frames,
 			common.frames_processed,		
 				common.endoPoints,

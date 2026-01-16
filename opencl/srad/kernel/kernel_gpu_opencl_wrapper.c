@@ -114,12 +114,7 @@ kernel_gpu_opencl_wrapper(	fp* image,											// input image
 
 	// Create context for selected platform and device type
 	cl_context context;
-	cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-		CL_DEVICE_TYPE_CPU;
-#else
-		CL_DEVICE_TYPE_GPU;
-#endif
+	cl_device_type device_type = CL_DEVICE_TYPE_GPU;
 	context = clCreateContextFromType(	context_properties, 
 										device_type, 
 										NULL, 

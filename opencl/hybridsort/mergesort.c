@@ -51,15 +51,10 @@ double mergesum = 0;
 void init_mergesort(int listsize){
     cl_uint platform_count = 0;
     cl_uint device_count = 0;
-    cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-        CL_DEVICE_TYPE_CPU;
-#else
-        CL_DEVICE_TYPE_GPU;
-#endif
+    cl_device_type device_type = CL_DEVICE_TYPE_GPU;
     clGetPlatformIDs(0,NULL,&platform_count);
     if (platform_count == 0) {
-        printf("Error: No OpenCL platforms found!\n");
+        printf("FATAL: No OpenCL platforms found!\n");
         exit(1);
     }
     cl_platform_id platformID[platform_count];
@@ -73,8 +68,7 @@ void init_mergesort(int listsize){
         }
     }
     if (device_count == 0) {
-        const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
-        printf("Error: required OpenCL %s device not available!\n", device_label);
+        printf("FATAL: required OpenCL GPU device not available!\n");
         exit(1);
     }
 

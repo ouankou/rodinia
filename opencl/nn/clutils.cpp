@@ -100,12 +100,8 @@ static bool eventsEnabled = false;
 */
 cl_context cl_init(char devicePreference) 
 {
-    cl_int status;   
-#ifdef RODINIA_OPENCL_FORCE_CPU
-    devicePreference = 'c';
-#else
-    devicePreference = 'g';
-#endif
+    cl_int status;
+    (void)devicePreference;
 
     // Discover and populate the platforms
     status = clGetPlatformIDs(0, NULL, &numPlatforms);
@@ -122,23 +118,16 @@ cl_context cl_init(char devicePreference)
     else 
     {
         // If no platforms are available, we shouldn't continue
-        printf("No OpenCL platforms found\n");
-        exit(-1);
+        fprintf(stderr, "FATAL: No OpenCL platforms found\n");
+        exit(1);
     }
 
     // Allocate space for the device lists and lengths
     numDevices = (cl_uint*)alloc(sizeof(cl_uint)*numPlatforms);
     devices = (cl_device_id**)alloc(sizeof(cl_device_id*)*numPlatforms);
 
-    // If a device preference was supplied, we'll limit the search of devices
-    // based on type
-    cl_device_type deviceType = CL_DEVICE_TYPE_ALL;
-    if(devicePreference == 'c') {
-        deviceType = CL_DEVICE_TYPE_CPU;
-    }
-    if(devicePreference == 'g') {
-        deviceType = CL_DEVICE_TYPE_GPU;
-    }
+    // Always select GPU devices
+    cl_device_type deviceType = CL_DEVICE_TYPE_GPU;
 
     // Traverse the platforms array printing information and
     // populating devices
@@ -252,12 +241,7 @@ cl_context cl_init_context(int platform, int dev,int quiet) {
     int printInfo=1;
     if (platform >= 0 && dev >= 0) printInfo = 0;
 	cl_int status;
-	cl_device_type requested_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-		CL_DEVICE_TYPE_CPU;
-#else
-		CL_DEVICE_TYPE_GPU;
-#endif
+	cl_device_type requested_type = CL_DEVICE_TYPE_GPU;
 	// Used to iterate through the platforms and devices, respectively
 	cl_uint numPlatforms;
 	cl_uint numDevices;
@@ -329,8 +313,8 @@ cl_context cl_init_context(int platform, int dev,int quiet) {
 	else
 	{
 		// If no platforms are available, we're sunk!
-		printf("No OpenCL platforms found\n");
-		exit(0);
+		fprintf(stderr, "FATAL: No OpenCL platforms found\n");
+		exit(1);
 	}
 
 	int platform_touse = platform;
@@ -353,8 +337,7 @@ cl_context cl_init_context(int platform, int dev,int quiet) {
 		}
 	}
 	if (platform_touse < 0 || (cl_uint)platform_touse >= numPlatforms) {
-		const char *device_label = (requested_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
-		printf("No OpenCL %s devices found\n", device_label);
+		fprintf(stderr, "FATAL: No OpenCL GPU devices found\n");
 		exit(1);
 	}
 	if (!quiet) printf("Using Platform %d \t Device No %d \n",platform_touse, device_index);
@@ -385,13 +368,11 @@ status = clGetDeviceIDs(platforms[platform_touse],
 					(void *)&dtype,
 					NULL);
 	if(cl_errChk(status,"Error in Getting Device Info\n",true)) exit(1);
-	if(dtype == CL_DEVICE_TYPE_GPU) {
-	  if (!quiet) printf("Creating GPU Context\n\n");
+	if(dtype != CL_DEVICE_TYPE_GPU) {
+	  printf("FATAL: Selected OpenCL device is not a GPU\n");
+	  exit(1);
 	}
-	else if (dtype == CL_DEVICE_TYPE_CPU) {
-      if (!quiet) printf("Creating CPU Context\n\n");
-	}
-	else perror("This Context Type Not Supported\n");
+	if (!quiet) printf("Creating GPU Context\n\n");
 
 	cl_context_properties cps[3] = {CL_CONTEXT_PLATFORM,
 		(cl_context_properties)(platforms[platform_touse]), 0};

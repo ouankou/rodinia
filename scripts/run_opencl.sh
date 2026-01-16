@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/build-opencl"
-OUT_DIR="${ROOT_DIR}/run_outputs/opencl"
+OUT_DIR=""
 ONLY=()
 
 usage() {
@@ -12,7 +12,7 @@ Usage: scripts/run_opencl.sh [options]
 
 Options:
   --build-dir <path>   CMake build directory (default: build-opencl)
-  --output-dir <path>  Output directory for generated files (default: run_outputs/opencl)
+  --output-dir <path>  Output directory for generated files (default: <build-dir>/run_outputs/opencl)
   --only <name>        Run only the named benchmark (repeatable)
   -h, --help           Show this help
 
@@ -51,8 +51,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 BUILD_DIR="$(cd "${BUILD_DIR}" && pwd)"
+if [[ -z "${OUT_DIR}" ]]; then
+  OUT_DIR="${BUILD_DIR}/run_outputs/opencl"
+fi
 mkdir -p "${OUT_DIR}"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
+export RODINIA_OUTPUT_DIR="${OUT_DIR}"
 BIN_DIR="${BUILD_DIR}/bin/opencl"
 DATA_DIR="${ROOT_DIR}/data"
 
@@ -224,8 +228,8 @@ if should_run particlefilter_double; then
   require_bin OCL_particlefilter_double
   run_cmd particlefilter_double "${ROOT_DIR}/opencl/particlefilter" \
     "${BIN_DIR}/OCL_particlefilter_double -x 128 -y 128 -z 10 -np 400000"
-  if [[ -f "${ROOT_DIR}/opencl/particlefilter/output.txt" ]]; then
-    mv "${ROOT_DIR}/opencl/particlefilter/output.txt" "${OUT_DIR}/particlefilter_double_output.txt"
+  if [[ -f "${OUT_DIR}/output.txt" ]]; then
+    mv "${OUT_DIR}/output.txt" "${OUT_DIR}/particlefilter_double_output.txt"
   fi
 fi
 
@@ -233,8 +237,8 @@ if should_run particlefilter_single; then
   require_bin OCL_particlefilter_single
   run_cmd particlefilter_single "${ROOT_DIR}/opencl/particlefilter" \
     "${BIN_DIR}/OCL_particlefilter_single -x 128 -y 128 -z 10 -np 400000"
-  if [[ -f "${ROOT_DIR}/opencl/particlefilter/output.txt" ]]; then
-    mv "${ROOT_DIR}/opencl/particlefilter/output.txt" "${OUT_DIR}/particlefilter_single_output.txt"
+  if [[ -f "${OUT_DIR}/output.txt" ]]; then
+    mv "${OUT_DIR}/output.txt" "${OUT_DIR}/particlefilter_single_output.txt"
   fi
 fi
 
@@ -242,8 +246,8 @@ if should_run particlefilter_naive; then
   require_bin OCL_particlefilter_naive
   run_cmd particlefilter_naive "${ROOT_DIR}/opencl/particlefilter" \
     "${BIN_DIR}/OCL_particlefilter_naive -x 128 -y 128 -z 10 -np 10000"
-  if [[ -f "${ROOT_DIR}/opencl/particlefilter/output.txt" ]]; then
-    mv "${ROOT_DIR}/opencl/particlefilter/output.txt" "${OUT_DIR}/particlefilter_naive_output.txt"
+  if [[ -f "${OUT_DIR}/output.txt" ]]; then
+    mv "${OUT_DIR}/output.txt" "${OUT_DIR}/particlefilter_naive_output.txt"
   fi
 fi
 

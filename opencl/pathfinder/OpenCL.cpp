@@ -206,7 +206,12 @@ void OpenCL::getDevices(cl_device_type deviceType)
 	/* The following code queries the number of platforms and devices, and
 	 * lists the information about both.
 	 */
-	clGetPlatformIDs(100, platform_id, &platforms_n);
+	cl_int platform_ret = clGetPlatformIDs(100, platform_id, &platforms_n);
+	if (platform_ret != CL_SUCCESS || platforms_n == 0)
+	{
+		fprintf(stderr, "FATAL: No OpenCL platforms found\n");
+		exit(1);
+	}
 	if (VERBOSE)
 	{
 		printf("\n=== %d OpenCL platform(s) found: ===\n", platforms_n);
@@ -233,8 +238,7 @@ void OpenCL::getDevices(cl_device_type deviceType)
 	cl_int ret = clGetDeviceIDs(platform_id[0], deviceType, 100, device_id, &devices_n);
 	if (ret != CL_SUCCESS || devices_n == 0)
 	{
-		const char *device_label = (deviceType == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
-		printf("Error: required OpenCL %s device not available\n", device_label);
+		fprintf(stderr, "FATAL: required OpenCL GPU device not available\n");
 		exit(1);
 	}
 	if (VERBOSE)
@@ -296,12 +300,9 @@ void OpenCL::getDevices(cl_device_type deviceType)
 	}
 }
 
-void OpenCL::init(int isGPU)
+void OpenCL::init()
 {
-	if (isGPU)
-		getDevices(CL_DEVICE_TYPE_GPU);
-	else
-		getDevices(CL_DEVICE_TYPE_CPU);
+	getDevices(CL_DEVICE_TYPE_GPU);
 
 	buildKernel();
 }

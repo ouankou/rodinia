@@ -22,7 +22,7 @@ class OpenCL
 public:
 	OpenCL(int displayOutput);
 	~OpenCL();
-	void init(int isGPU);
+	void init();
 	void createKernel(string kernelName);
 	cl_kernel kernel(string kernelName);
 	void gwSize(size_t theSize);

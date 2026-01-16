@@ -22,6 +22,7 @@
 #include <stdbool.h>				// (in path known to compiler)			needed by true/false
 #include <string.h>
 #include <time.h>
+#include <limits.h>				// (in path known to compiler)			needed by PATH_MAX
 
 //======================================================================================================================================================150
 //	UTILITIES
@@ -304,7 +305,18 @@ main(	int argc,
 	// dump results
 #ifdef OUTPUT
         FILE *fptr;
-	fptr = fopen("result.txt", "w");	
+	const char *output_path = "result.txt";
+	char output_full[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+		if (written > 0 && (size_t)written < sizeof(output_full)) {
+			output_path = output_full;
+		} else {
+			fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+		}
+	}
+	fptr = fopen(output_path, "w");	
 	for(i=0; i<dim_cpu.space_elem; i=i+1){
         	fprintf(fptr, "%f, %f, %f, %f\n", fv_cpu[i].v, fv_cpu[i].x, fv_cpu[i].y, fv_cpu[i].z);
 	}

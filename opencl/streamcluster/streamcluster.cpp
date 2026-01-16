@@ -971,7 +971,8 @@ int main(int argc, char **argv)
 	printf("time GPU free = %lf\n", gpu_free);
 	printf("time kernel = %lf\n", kernel);
 	
-  FILE *fp = fopen("PD.txt", "w");
+  string pd_path = rodinia_output_path("PD.txt");
+  FILE *fp = fopen(pd_path.c_str(), "w");
   fprintf(fp, "%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf\n", time_FL, cpu_gpu_memcpy, memcpy_back, kernel, gpu_malloc, gpu_free, 0.0);
   fclose(fp);	
  #endif

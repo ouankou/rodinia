@@ -58,6 +58,7 @@
 //======================================================================================================================================================150
 
 #include <stdio.h>									// (in directory known to compiler)			needed by printf, stderr
+#include <stdlib.h>									// (in directory known to compiler)			needed by getenv
 #include <limits.h>									// (in directory known to compiler)			needed by INT_MIN, INT_MAX
 // #include <sys/time.h>							// (in directory known to compiler)			needed by ???
 #include <math.h>									// (in directory known to compiler)			needed by log, pow
@@ -1854,7 +1855,17 @@ main(	int argc,
 	int cores_arg =1;
 	char *input_file = NULL;
 	char *command_file = NULL;
-	char *output="output.txt";
+	char *output = (char *)"output.txt";
+	char output_path[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, output);
+		if (written > 0 && (size_t)written < sizeof(output_path)) {
+			output = output_path;
+		} else {
+			fprintf(stderr, "Warning: output path too long, using %s\n", output);
+		}
+	}
 	FILE * pFile;
 
 

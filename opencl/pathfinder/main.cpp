@@ -102,14 +102,8 @@ int main(int argc, char** argv)
 	int size = rows * cols;
 
 	// Create and initialize the OpenCL object.
-	int use_gpu =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-		0;
-#else
-		1;
-#endif
 	OpenCL cl(1);  // 1 means to display output (debugging mode).
-	cl.init(use_gpu);
+	cl.init();
 	cl.gwSize(rows * cols);
 
 	// Create and build the kernel.

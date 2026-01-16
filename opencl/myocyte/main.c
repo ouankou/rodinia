@@ -121,6 +121,7 @@
 #include <stdio.h>											// (in path known to compiler) needed by printf
 #include <stdlib.h>											// (in path known to compiler) meeded by malloc, free
 #include <string.h>										// (in path known to compiler) needed by strcmp
+#include <limits.h>								// (in path known to compiler) needed by PATH_MAX
 
 //======================================================================================================================================================150
 //	HEADER
@@ -280,7 +281,18 @@ main(	int argc,
 
 
 	  FILE * pFile;
-	  pFile = fopen("output.txt", "w");
+	  const char *output_path = "output.txt";
+	  char output_full[PATH_MAX];
+	  const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	  if (output_dir && output_dir[0] != '\0') {
+	    int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+	    if (written > 0 && (size_t)written < sizeof(output_full)) {
+	      output_path = output_full;
+	    } else {
+	      fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+	    }
+	  }
+	  pFile = fopen(output_path, "w");
 	  if (pFile == NULL) {
 	    perror("fopen output.txt");
 	    return -1;

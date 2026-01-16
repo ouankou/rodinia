@@ -5,11 +5,7 @@
 #include "CL_helper.h"
 
 #ifndef DEVICE
-#ifdef RODINIA_OPENCL_FORCE_CPU
-#define DEVICE CL_DEVICE_TYPE_CPU
-#else
 #define DEVICE CL_DEVICE_TYPE_GPU
-#endif
 #endif
 
 #define TOL      (0.001)
@@ -116,7 +112,7 @@ int main(int argc, char** argv)
   err = clGetPlatformIDs(0, NULL, &numPlatforms);
   if (err != CL_SUCCESS || numPlatforms <= 0)
     {
-      printf("Error: Failed to find a platform!\n%s\n",err_code(err));
+      printf("FATAL: Failed to find an OpenCL platform!\n%s\n", err_code(err));
       return EXIT_FAILURE;
     }
 
@@ -124,7 +120,7 @@ int main(int argc, char** argv)
   err = clGetPlatformIDs(numPlatforms, Platform, NULL);
   if (err != CL_SUCCESS || numPlatforms <= 0)
     {
-      printf("Error: Failed to get the platform!\n%s\n",err_code(err));
+      printf("FATAL: Failed to get OpenCL platforms!\n%s\n", err_code(err));
       return EXIT_FAILURE;
     }
 
@@ -139,7 +135,7 @@ int main(int argc, char** argv)
 
   if (device_id == NULL)
     {
-      printf("Error: Failed to create a device group!\n%s\n",err_code(err));
+      printf("FATAL: No OpenCL GPU devices found!\n%s\n", err_code(err));
       return EXIT_FAILURE;
     }
 

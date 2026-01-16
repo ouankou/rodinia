@@ -7,7 +7,7 @@ if [[ -d "${ROOT_DIR}/build-omp-clang-cuda" ]]; then
 else
   BUILD_DIR="${ROOT_DIR}/build-omp-clang"
 fi
-OUT_DIR="${ROOT_DIR}/run_outputs/omp"
+OUT_DIR=""
 THREADS=32
 RUN_MUMMERGPU=1
 ONLY=()
@@ -18,7 +18,7 @@ Usage: scripts/run_openmp.sh [options]
 
 Options:
   --build-dir <path>   CMake build directory (default: build-omp-clang)
-  --output-dir <path>  Output directory for generated files (default: run_outputs/omp)
+  --output-dir <path>  Output directory for generated files (default: <build-dir>/run_outputs/omp)
   --threads <n>        OpenMP thread count to use (default: 32)
   --only <name>        Run only the named benchmark (repeatable)
   --skip-mummergpu     Skip mummergpu even if built
@@ -66,8 +66,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 BUILD_DIR="$(cd "${BUILD_DIR}" && pwd)"
+if [[ -z "${OUT_DIR}" ]]; then
+  OUT_DIR="${BUILD_DIR}/run_outputs/omp"
+fi
 mkdir -p "${OUT_DIR}"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
+export RODINIA_OUTPUT_DIR="${OUT_DIR}"
 BIN_DIR="${BUILD_DIR}/bin/omp"
 DATA_DIR="${ROOT_DIR}/data"
 

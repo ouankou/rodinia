@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 #include <sys/time.h>
 #include <omp.h>
 #define OPENMP
@@ -313,8 +314,18 @@ runTest( int argc, char** argv)
 
 #define TRACEBACK
 #ifdef TRACEBACK
-
-    FILE *fpo = fopen("result.txt","w");
+    const char *output_path = "result.txt";
+    char output_full[PATH_MAX];
+    const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+    if (output_dir && output_dir[0] != '\0') {
+        int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+        if (written > 0 && (size_t)written < sizeof(output_full)) {
+            output_path = output_full;
+        } else {
+            fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+        }
+    }
+    FILE *fpo = fopen(output_path,"w");
     fprintf(fpo, "print traceback value GPU:\n");
 
     for (int i = max_rows - 2,  j = max_rows - 2; i >= 0 && j >= 0;){

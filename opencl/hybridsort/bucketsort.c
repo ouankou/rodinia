@@ -86,15 +86,10 @@ void init_bucketsort(int listsize)
 {
     cl_uint platform_count = 0;
     cl_uint device_count = 0;
-    cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-        CL_DEVICE_TYPE_CPU;
-#else
-        CL_DEVICE_TYPE_GPU;
-#endif
+    cl_device_type device_type = CL_DEVICE_TYPE_GPU;
     clGetPlatformIDs(0, NULL, &platform_count);
     if (platform_count == 0) {
-        printf("Error: No OpenCL platforms found!\n");
+        printf("FATAL: No OpenCL platforms found!\n");
         exit(1);
     }
 
@@ -110,15 +105,13 @@ void init_bucketsort(int listsize)
         }
     }
     if (device_count == 0) {
-        const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
-        printf("Error: required OpenCL %s device not available!\n", device_label);
+        printf("FATAL: required OpenCL GPU device not available!\n");
         exit(1);
     }
 
     cl_device_id devices[device_count];
     err = clGetDeviceIDs(platform, device_type, device_count, devices, NULL);
 //    int gpu = 1;
-//    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 2, &device_id, NULL);
     
     if (err != CL_SUCCESS)
     {
@@ -224,15 +217,10 @@ void finish_bucketsort()
 void histogramInit(int listsize) {
     cl_uint platform_count = 0;
     cl_uint device_count = 0;
-    cl_device_type device_type =
-#ifdef RODINIA_OPENCL_FORCE_CPU
-        CL_DEVICE_TYPE_CPU;
-#else
-        CL_DEVICE_TYPE_GPU;
-#endif
+    cl_device_type device_type = CL_DEVICE_TYPE_GPU;
     clGetPlatformIDs(0, NULL, &platform_count);
     if (platform_count == 0) {
-        printf("Error: No OpenCL platforms found!\n");
+        printf("FATAL: No OpenCL platforms found!\n");
         exit(1);
     }
 
@@ -248,8 +236,7 @@ void histogramInit(int listsize) {
         }
     }
     if (device_count == 0) {
-        const char *device_label = (device_type == CL_DEVICE_TYPE_GPU) ? "GPU" : "CPU";
-        printf("Error: required OpenCL %s device not available!\n", device_label);
+        printf("FATAL: required OpenCL GPU device not available!\n");
         exit(1);
     }
 
@@ -261,7 +248,6 @@ void histogramInit(int listsize) {
     cl_device_id devices[device_count];
     err = clGetDeviceIDs(platform, device_type, device_count, devices, NULL);
     //    int gpu = 1;
-    //    err = clGetDeviceIDs(NULL, gpu ? CL_DEVICE_TYPE_GPU : CL_DEVICE_TYPE_CPU, 2, &device_id, NULL);
     
     if (err != CL_SUCCESS)
     {
