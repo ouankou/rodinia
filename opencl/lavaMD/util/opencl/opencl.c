@@ -63,7 +63,7 @@ fatal(const char *s)
 void 
 fatal_CL(cl_int error, int line_no) {
 
-	printf("FATAL: OpenCL error at line %d: ", line_no);
+	fprintf(stderr, "FATAL: OpenCL error at line %d: ", line_no);
 
 	switch(error) {
 

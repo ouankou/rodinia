@@ -369,7 +369,7 @@ status = clGetDeviceIDs(platforms[platform_touse],
 					NULL);
 	if(cl_errChk(status,"Error in Getting Device Info\n",true)) exit(1);
 	if(dtype != CL_DEVICE_TYPE_GPU) {
-	  printf("FATAL: Selected OpenCL device is not a GPU\n");
+	  fprintf(stderr, "FATAL: Selected OpenCL device is not a GPU\n");
 	  exit(1);
 	}
 	if (!quiet) printf("Creating GPU Context\n\n");

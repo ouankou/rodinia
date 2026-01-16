@@ -92,7 +92,7 @@ cl_context CreateContext()
     }
 
     std::cerr << "FATAL: Failed to create an OpenCL GPU context." << std::endl;
-    return NULL;
+    exit(1);
 
 }
 
@@ -275,7 +275,7 @@ void usage() {
 void fatal_CL(cl_int error, int line_no)
 {
 
-	printf("FATAL: OpenCL error at line %d: ", line_no);
+	fprintf(stderr, "FATAL: OpenCL error at line %d: ", line_no);
 
 	switch(error) {
 

@@ -54,7 +54,7 @@ void init_mergesort(int listsize){
     cl_device_type device_type = CL_DEVICE_TYPE_GPU;
     clGetPlatformIDs(0,NULL,&platform_count);
     if (platform_count == 0) {
-        printf("FATAL: No OpenCL platforms found!\n");
+        fprintf(stderr, "FATAL: No OpenCL platforms found!\n");
         exit(1);
     }
     cl_platform_id platformID[platform_count];
@@ -68,7 +68,7 @@ void init_mergesort(int listsize){
         }
     }
     if (device_count == 0) {
-        printf("FATAL: required OpenCL GPU device not available!\n");
+        fprintf(stderr, "FATAL: required OpenCL GPU device not available!\n");
         exit(1);
     }
 

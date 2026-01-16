@@ -112,16 +112,16 @@ int main(int argc, char** argv)
   err = clGetPlatformIDs(0, NULL, &numPlatforms);
   if (err != CL_SUCCESS || numPlatforms <= 0)
     {
-      printf("FATAL: Failed to find an OpenCL platform!\n%s\n", err_code(err));
-      return EXIT_FAILURE;
+      fprintf(stderr, "FATAL: Failed to find an OpenCL platform!\n%s\n", err_code(err));
+      exit(1);
     }
 
   cl_platform_id Platform[numPlatforms];
   err = clGetPlatformIDs(numPlatforms, Platform, NULL);
   if (err != CL_SUCCESS || numPlatforms <= 0)
     {
-      printf("FATAL: Failed to get OpenCL platforms!\n%s\n", err_code(err));
-      return EXIT_FAILURE;
+      fprintf(stderr, "FATAL: Failed to get OpenCL platforms!\n%s\n", err_code(err));
+      exit(1);
     }
 
   for (i = 0; i < numPlatforms; i++)
@@ -135,8 +135,8 @@ int main(int argc, char** argv)
 
   if (device_id == NULL)
     {
-      printf("FATAL: No OpenCL GPU devices found!\n%s\n", err_code(err));
-      return EXIT_FAILURE;
+      fprintf(stderr, "FATAL: No OpenCL GPU devices found!\n%s\n", err_code(err));
+      exit(1);
     }
 
   err = output_device_info(device_id);
