@@ -419,7 +419,7 @@ void _clInit(string device_type, int device_id){
     // Next, get the device list data 
 	oclHandles.cl_status = clGetDeviceIDs(targetPlatform, requested_type, deviceListSize, oclHandles.devices, NULL);
 	if(oclHandles.cl_status!=CL_SUCCESS){
-		throw(string("exception in _clInit -> clGetDeviceIDs -> GPU -> 2"));
+		rodinia_fatal("exception in _clInit -> clGetDeviceIDs -> GPU -> 2");
 	}
    if(device_id!=0){
    	if(device_id>(deviceListSize-1))
