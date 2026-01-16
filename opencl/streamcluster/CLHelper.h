@@ -9,6 +9,7 @@
 #include <CL/cl.h>
 #include <cstdlib>
 #include <vector>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -243,7 +244,8 @@ void _clCmdParams(int argc, char* argv[]){
 		switch (argv[i][1]){
 			case 't':	//--t stands for device type (gpu only)
 				if (++i < argc){
-					sscanf(argv[i], "%7s", device_type);
+					std::strncpy(device_type, argv[i], sizeof(device_type) - 1);
+					device_type[sizeof(device_type) - 1] = '\0';
 					device_type_set = true;
 				}
 				else{
