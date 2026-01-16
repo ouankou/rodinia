@@ -1855,7 +1855,7 @@ main(	int argc,
 	int cores_arg =1;
 	char *input_file = NULL;
 	char *command_file = NULL;
-	char *output = (char *)"output.txt";
+	const char *output = "output.txt";
 	char output_path[PATH_MAX];
 	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
 	if (output_dir && output_dir[0] != '\0') {
