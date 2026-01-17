@@ -64,36 +64,50 @@ findRangeK(	long height,
 	// private thread IDs
 	int thid = get_local_id(0);
 	int bid = get_group_id(0);
+	int threadsPerBlock = get_local_size(0);
 
 	// ???
 	int i;
 	for(i = 0; i < height; i++){
 
-		if((knodesD[currKnodeD[bid]].keys[thid] <= startD[bid]) && (knodesD[currKnodeD[bid]].keys[thid+1] > startD[bid])){
-			// this conditional statement is inserted to avoid crush due to but in original code
-			// "offset[bid]" calculated below that later addresses part of knodes goes outside of its bounds cause segmentation fault
-			// more specifically, values saved into knodes->indices in the main function are out of bounds of knodes that they address
-			if(knodesD[currKnodeD[bid]].indices[thid] < knodes_elem){
-				offsetD[bid] = knodesD[currKnodeD[bid]].indices[thid];
+		// Avoid data races by letting a single work-item update traversal state.
+		if(thid == 0){
+			long curr = currKnodeD[bid];
+			long last = lastKnodeD[bid];
+			long next = curr;
+			long next_last = last;
+			int k;
+			int start_found = 0;
+			int end_found = 0;
+			for(k = 0; k < threadsPerBlock; k++){
+				int curr_left = knodesD[curr].keys[k];
+				int curr_right = knodesD[curr].keys[k+1];
+				if(!start_found && (curr_left <= startD[bid]) && (curr_right > startD[bid])){
+					long candidate = (long)knodesD[curr].indices[k];
+					if(candidate < knodes_elem){
+						next = candidate;
+					}
+					start_found = 1;
+				}
+				int last_left = knodesD[last].keys[k];
+				int last_right = knodesD[last].keys[k+1];
+				if(!end_found && (last_left <= endD[bid]) && (last_right > endD[bid])){
+					long candidate = (long)knodesD[last].indices[k];
+					if(candidate < knodes_elem){
+						next_last = candidate;
+					}
+					end_found = 1;
+				}
+				if(start_found && end_found){
+					break;
+				}
 			}
+			offsetD[bid] = next;
+			offset_2D[bid] = next_last;
+			currKnodeD[bid] = next;
+			lastKnodeD[bid] = next_last;
 		}
-		if((knodesD[lastKnodeD[bid]].keys[thid] <= endD[bid]) && (knodesD[lastKnodeD[bid]].keys[thid+1] > endD[bid])){
-			// this conditional statement is inserted to avoid crush due to but in original code
-			// "offset_2[bid]" calculated below that later addresses part of knodes goes outside of its bounds cause segmentation fault
-			// more specifically, values saved into knodes->indices in the main function are out of bounds of knodes that they address
-			if(knodesD[lastKnodeD[bid]].indices[thid] < knodes_elem){
-				offset_2D[bid] = knodesD[lastKnodeD[bid]].indices[thid];
-			}
-		}
-		//__syncthreads();
-		barrier(CLK_LOCAL_MEM_FENCE);
-		// set for next tree level
-		if(thid==0){
-			currKnodeD[bid] = offsetD[bid];
-			lastKnodeD[bid] = offset_2D[bid];
-		}
-		//	__syncthreads();
-		barrier(CLK_LOCAL_MEM_FENCE);
+		barrier(CLK_GLOBAL_MEM_FENCE);
 	}
 
 	// Find the index of the starting record

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <cstdio>
+#include <limits.h>
 
 #ifdef  PROFILING
 #include "timer.h"
@@ -247,7 +249,6 @@ int main(int argc, char * argv[])
 		if (fscanf(fp,"%d",&source) != 1) {
 			throw(string("Error reading source node"));
 		}
-		source=0;
 		//set the source node as true in the mask
 		h_graph_mask[source]=true;
 		h_graph_visited[source]=true;
@@ -296,6 +297,28 @@ int main(int argc, char * argv[])
 		//---------------------------------------------------------
 		//--result varification
 		compare_results<int>(h_cost_ref, h_cost, no_of_nodes);
+		//Store the result into a file
+		const char *output_path = "result.txt";
+		char output_full[PATH_MAX];
+		const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+		if (output_dir && output_dir[0] != '\0') {
+			int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+			if (written > 0 && (size_t)written < sizeof(output_full)) {
+				output_path = output_full;
+			} else {
+				fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+			}
+		}
+		FILE *fpo = fopen(output_path, "w");
+		if (fpo) {
+			for (int i = 0; i < no_of_nodes; i++) {
+				fprintf(fpo, "%d) cost:%d\n", i, h_cost[i]);
+			}
+			fclose(fpo);
+			printf("Result stored in %s\n", output_path);
+		} else {
+			perror("fopen result.txt");
+		}
 		//release host memory		
 		free(h_graph_nodes);
 		free(h_graph_mask);

@@ -280,6 +280,14 @@ int setup(int argc, char **argv) {
 					nloops);				/* number of iteration for each number of clusters */		
     
 	//cluster_timing = omp_get_wtime() - cluster_timing;
+	int checksum_clusters = (min_nclusters == max_nclusters) ? max_nclusters : best_nclusters;
+	double checksum = 0.0;
+	for(i = 0; i < checksum_clusters; i++){
+		for(j = 0; j < nfeatures; j++){
+			checksum += cluster_centres[i][j];
+		}
+	}
+	printf("Cluster centers checksum: %.8f\n", checksum);
 
 
 	/* =============== Command Line Output =============== */

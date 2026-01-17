@@ -517,10 +517,10 @@ void kernel(public_struct public,
 		private.d_tMask[tMask_col*public.tMask_rows + tMask_row] = 1;
 
 
-		//====================================================================================================
-		//	1) MASK CONVOLUTION
-		//	2) MULTIPLICATION
-		//====================================================================================================
+	//====================================================================================================
+	//	1) MASK CONVOLUTION
+	//	2) MULTIPLICATION
+	//====================================================================================================
 
 		// work
 		// for(col=1; col<=public.conv_cols; col++){
@@ -589,10 +589,14 @@ void kernel(public_struct public,
 
 		fin_max_val = 0;
 		fin_max_coo = 0;
-		for(i=0; i<public.mask_conv_elem; i++){
-			if(private.d_mask_conv[i]>fin_max_val){
-				fin_max_val = private.d_mask_conv[i];
-				fin_max_coo = i;
+		for(row=0; row<public.mask_conv_rows; row++){
+			for(col=0; col<public.mask_conv_cols; col++){
+				int idx = col * public.mask_conv_rows + row;
+				fp abs_val = fabs(private.d_mask_conv[idx]);
+				if(abs_val > fin_max_val){
+					fin_max_val = abs_val;
+					fin_max_coo = idx;
+				}
 			}
 		}
 
