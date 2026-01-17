@@ -143,7 +143,7 @@ compare_float_column() {
       if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom;
       if (rel > max_rel) max_rel = rel;
-      if (diff > abs_tol && rel > rel_tol) count++;
+      if (diff > abs_tol || rel > rel_tol) count++;
     }
     END {
       if (missing || m != n) {
@@ -184,7 +184,7 @@ compare_float_triple() {
         if (denom < 1e-12) denom = 1e-12;
         rel = diff / denom;
         if (rel > max_rel) max_rel = rel;
-        if (diff > abs_tol && rel > rel_tol) count++;
+        if (diff > abs_tol || rel > rel_tol) count++;
       }
     }
     END {
@@ -260,7 +260,7 @@ compare_float_list() {
         if (denom < 1e-12) denom = 1e-12;
         rel = diff / denom;
         if (rel > max_rel) max_rel = rel;
-        if (diff > abs_tol && rel > rel_tol) count++;
+        if (diff > abs_tol || rel > rel_tol) count++;
       }
     }
     END {
@@ -305,7 +305,7 @@ compare_float_list_csv() {
         if (denom < 1e-12) denom = 1e-12;
         rel = diff / denom;
         if (rel > max_rel) max_rel = rel;
-        if (diff > abs_tol && rel > rel_tol) count++;
+        if (diff > abs_tol || rel > rel_tol) count++;
       }
     }
     END {
@@ -347,12 +347,12 @@ compare_backprop_errors() {
       if (diff > max_abs) max_abs = diff;
       denom = out1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom; if (rel > max_rel) max_rel = rel;
-      if (diff > abs_tol && rel > rel_tol) count++;
+      if (diff > abs_tol || rel > rel_tol) count++;
       diff = hid2 - hid1; if (diff < 0) diff = -diff;
       if (diff > max_abs) max_abs = diff;
       denom = hid1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom; if (rel > max_rel) max_rel = rel;
-      if (diff > abs_tol && rel > rel_tol) count++;
+      if (diff > abs_tol || rel > rel_tol) count++;
       status = (count > 0) ? "MISMATCH" : "OK";
       printf "%s max_abs=%g max_rel=%g count_gt_tol=%d", status, max_abs, max_rel, count;
     }' "$f1" "$f2")
@@ -382,7 +382,7 @@ compare_kmeans_checksum() {
       diff = v2 - v1; if (diff < 0) diff = -diff;
       denom = v1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom;
-      status = (diff > abs_tol && rel > rel_tol) ? "MISMATCH" : "OK";
+      status = (diff > abs_tol || rel > rel_tol) ? "MISMATCH" : "OK";
       printf "%s abs=%g rel=%g", status, diff, rel;
     }' "$f1" "$f2")
   if [[ "$result" == MISMATCH* ]]; then
@@ -498,7 +498,7 @@ compare_myocyte_values() {
         if (denom < 1e-12) denom = 1e-12;
         rel = diff / denom;
         if (rel > max_rel) max_rel = rel;
-        if (diff > abs_tol && rel > rel_tol) count++;
+        if (diff > abs_tol || rel > rel_tol) count++;
       }
     }
     END {
@@ -549,7 +549,7 @@ compare_nn_neighbors() {
         if (denom < 1e-12) denom = 1e-12;
         rel = diff / denom;
         if (rel > max_rel) max_rel = rel;
-        if (diff > abs_tol && rel > rel_tol) count++;
+        if (diff > abs_tol || rel > rel_tol) count++;
         m2++;
       }
     }
@@ -609,17 +609,17 @@ compare_particlefilter() {
       if (diff > max_abs) max_abs = diff;
       denom = xe1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom; if (rel > max_rel) max_rel = rel;
-      if (diff > abs_tol && rel > rel_tol) count++;
+      if (diff > abs_tol || rel > rel_tol) count++;
       diff = ye2 - ye1; if (diff < 0) diff = -diff;
       if (diff > max_abs) max_abs = diff;
       denom = ye1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom; if (rel > max_rel) max_rel = rel;
-      if (diff > abs_tol && rel > rel_tol) count++;
+      if (diff > abs_tol || rel > rel_tol) count++;
       diff = dist2 - dist1; if (diff < 0) diff = -diff;
       if (diff > max_abs) max_abs = diff;
       denom = dist1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom; if (rel > max_rel) max_rel = rel;
-      if (diff > abs_tol && rel > rel_tol) count++;
+      if (diff > abs_tol || rel > rel_tol) count++;
       status = (count > 0) ? "MISMATCH" : "OK";
       printf "%s max_abs=%g max_rel=%g count_gt_tol=%d", status, max_abs, max_rel, count;
     }' "$f1" "$f2")
@@ -677,7 +677,7 @@ compare_streamcluster_objective() {
       diff = obj2 - obj1; if (diff < 0) diff = -diff;
       denom = obj1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
       rel = diff / denom;
-      status = (diff > abs_tol && rel > rel_tol) ? "MISMATCH" : "OK";
+      status = (diff > abs_tol || rel > rel_tol) ? "MISMATCH" : "OK";
       printf "%s abs=%g rel=%g", status, diff, rel;
     }' "$f1" "$f2")
   if [[ "$result" == MISMATCH* ]]; then
