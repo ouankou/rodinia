@@ -352,7 +352,7 @@ int main(int argc, char *argv []){
 			fprintf(stderr, "Warning: output path too long, using %s\n", output_file);
 		}
 	}
-	write_graphics(	(char *)output_file,
+	write_graphics(	output_file,
 								image,
 								Nr,
 								Nc,

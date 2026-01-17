@@ -246,12 +246,10 @@ if should_run srad_v2; then
 fi
 
 if should_run mummergpu; then
-  if [[ ${RUN_MUMMERGPU} -eq 0 ]]; then
-    if [[ ${HAS_MUMMERGPU} -eq 0 ]]; then
-      echo "Skipping mummergpu: missing binary in ${BIN_DIR}; configure with CUDA to enable." >&2
-    fi
-  else
+  if [[ ${RUN_MUMMERGPU} -eq 1 ]]; then
     run_cmd mummergpu "${ROOT_DIR}/openmp/mummergpu" \
       "${BIN_DIR}/mummergpu -C ${DATA_DIR}/mummergpu/NC_003997.fna ${DATA_DIR}/mummergpu/NC_003997_q100bp.fna > ${OUT_DIR}/mummergpu.out"
+  elif [[ ${HAS_MUMMERGPU} -eq 0 ]]; then
+    echo "Skipping mummergpu: missing binary in ${BIN_DIR}; configure with CUDA to enable." >&2
   fi
 fi

@@ -583,7 +583,7 @@ int main(int argc, char * argv[]){
 	int * seed = (int *)malloc(sizeof(int)*Nparticles);
 	int i;
 	for(i = 0; i < Nparticles; i++)
-		seed[i] = i + 1;
+		seed[i] = (int)((unsigned int)i * 1664525u + 1013904223u);
 	//malloc matrix
 	int * I = (int *)malloc(sizeof(int)*IszX*IszY*Nfr);
 	long long start = get_time();
