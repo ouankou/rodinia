@@ -18,7 +18,6 @@ kernel_gpu_opencl_wrapper(	record *records,
 							int count,
 
 							long *currKnode,
-							long *offset,
 							int *keys,
 							record *ans);
 

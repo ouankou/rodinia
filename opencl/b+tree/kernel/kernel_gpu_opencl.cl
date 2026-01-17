@@ -63,7 +63,6 @@ findK(	long height,
 		__global record *recordsD,
 
 		__global long *currKnodeD,
-		__global long *offsetD,
 		__global int *keysD, 
 		__global record *ansD)
 {
@@ -94,7 +93,6 @@ findK(	long height,
 					break;
 				}
 			}
-			offsetD[bid] = next;
 			currKnodeD[bid] = next;
 		}
 		barrier(CLK_GLOBAL_MEM_FENCE);

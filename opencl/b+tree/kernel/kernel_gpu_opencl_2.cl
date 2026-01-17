@@ -52,9 +52,7 @@ findRangeK(	long height,
 			long knodes_elem,
 
 			__global long *currKnodeD,
-			__global long *offsetD,
 			__global long *lastKnodeD,
-			__global long *offset_2D,
 			__global int *startD,
 			__global int *endD,
 			__global int *RecstartD, 
@@ -102,8 +100,6 @@ findRangeK(	long height,
 					break;
 				}
 			}
-			offsetD[bid] = next;
-			offset_2D[bid] = next_last;
 			currKnodeD[bid] = next;
 			lastKnodeD[bid] = next_last;
 		}
