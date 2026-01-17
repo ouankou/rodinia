@@ -251,10 +251,6 @@ if should_run mummergpu; then
       echo "Skipping mummergpu: missing binary in ${BIN_DIR}; configure with CUDA to enable." >&2
     fi
   else
-    if [[ ! -x "${BIN_DIR}/mummergpu" ]]; then
-      echo "Missing mummergpu binary in ${BIN_DIR}; configure with CUDA and enable mummergpu." >&2
-      exit 1
-    fi
     run_cmd mummergpu "${ROOT_DIR}/openmp/mummergpu" \
       "${BIN_DIR}/mummergpu -C ${DATA_DIR}/mummergpu/NC_003997.fna ${DATA_DIR}/mummergpu/NC_003997_q100bp.fna > ${OUT_DIR}/mummergpu.out"
   fi

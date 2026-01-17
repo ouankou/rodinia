@@ -579,12 +579,12 @@ compare_particlefilter() {
   result=$(awk -v abs_tol="$abs_tol" -v rel_tol="$rel_tol" '
     FNR == 1 { file++ }
     {
-      if ($1 == "XE:" || $1 == "XE:") {
+      if ($1 == "XE:") {
         if (file == 1) xe1 = $2; else xe2 = $2;
-      } else if ($1 == "YE:" || $1 == "YE:") {
+      } else if ($1 == "YE:") {
         if (file == 1) ye1 = $2; else ye2 = $2;
         if (file == 1) after_ye1 = 1; else after_ye2 = 1;
-      } else if ($1 == "distance:" || $1 == "distance") {
+      } else if ($1 == "distance:") {
         if (file == 1) dist1 = $2; else dist2 = $2;
       } else if ($0 ~ /^[0-9eE.+-]+$/) {
         if (file == 1 && after_ye1) {

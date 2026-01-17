@@ -343,7 +343,7 @@ int main(int argc, char *argv []){
 	pFile = fopen(output_path, "w");
 	if (pFile == NULL) {
 		perror(output_path);
-		return 0;
+		return 1;
 	}
 	int k;
 	for(i=0; i<workload; i++){
