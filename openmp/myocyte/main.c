@@ -342,7 +342,7 @@ int main(int argc, char *argv []){
 	}
 	pFile = fopen(output_path, "w");
 	if (pFile == NULL) {
-		perror("fopen output.txt");
+		perror(output_path);
 		return 0;
 	}
 	int k;

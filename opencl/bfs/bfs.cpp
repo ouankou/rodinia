@@ -317,7 +317,7 @@ int main(int argc, char * argv[])
 			fclose(fpo);
 			printf("Result stored in %s\n", output_path);
 		} else {
-			perror("fopen result.txt");
+        perror(output_path);
 		}
 		//release host memory		
 		free(h_graph_nodes);
