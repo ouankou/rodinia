@@ -290,7 +290,6 @@ int main(int argc, char * argv[])
 			h_graph_visited[i]=false;
 		}
 		//set the source node as true in the mask
-		source=0;
 		h_graph_mask[source]=true;
 		h_graph_visited[source]=true;
 		run_bfs_cpu(no_of_nodes,h_graph_nodes,edge_list_size,h_graph_edges, h_graph_mask, h_updating_graph_mask, h_graph_visited, h_cost_ref);
