@@ -1880,7 +1880,7 @@ main(	int argc,
 		if (written > 0 && (size_t)written < sizeof(output_path)) {
 			output = output_path;
 		} else {
-			fprintf(stderr, "Warning: output path too long, using %s\n", output);
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output);
 		}
 	}
 	FILE * pFile;

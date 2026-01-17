@@ -138,7 +138,7 @@ int main(int argc, char** argv)
         if (written > 0 && (size_t)written < sizeof(input_path)) {
             filename2 = input_path;
         } else {
-            fprintf(stderr, "Warning: output path too long, using %s\n", filename2);
+            fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", filename2);
         }
     }
     tp = fopen(filename2, "w");
@@ -217,7 +217,7 @@ int main(int argc, char** argv)
         if (written > 0 && (size_t)written < sizeof(output_path)) {
             filename3 = output_path;
         } else {
-            fprintf(stderr, "Warning: output path too long, using %s\n", filename3);
+            fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", filename3);
         }
     }
     tp1 = fopen(filename3, "w");
