@@ -382,7 +382,7 @@ int main(int argc, char **argv){
     err = clEnqueueReadBuffer(cmd_queue, input_itemsets_d, 1, 0, max_cols * max_rows * sizeof(int), output_itemsets, 0, 0, 0);
 	clFinish(cmd_queue);
 
-//#define TRACEBACK	
+#define TRACEBACK	
 #ifdef TRACEBACK
 	const char *output_path = "result.txt";
 	char output_full[PATH_MAX];
@@ -392,7 +392,7 @@ int main(int argc, char **argv){
 		if (written > 0 && (size_t)written < sizeof(output_full)) {
 			output_path = output_full;
 		} else {
-			fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
 		}
 	}
 	FILE *fpo = fopen(output_path,"w");

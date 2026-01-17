@@ -48,7 +48,6 @@ kernel_gpu_opencl_wrapper(	record *records,
 							int count,
 
 							long *currKnode,
-							long *offset,
 							int *keys,
 							record *ans)
 {
@@ -302,19 +301,6 @@ kernel_gpu_opencl_wrapper(	record *records,
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
-	//	offsetD
-	//==================================================50
-
-	cl_mem offsetD;
-	offsetD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								count*sizeof(long), 
-								NULL, 
-								&error );
-	if (error != CL_SUCCESS) 
-		fatal_CL(error, __LINE__);
-
-	//==================================================50
 	//	keysD
 	//==================================================50
 
@@ -415,22 +401,6 @@ kernel_gpu_opencl_wrapper(	record *records,
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
-	//	offsetD
-	//==================================================50
-
-	error = clEnqueueWriteBuffer(	command_queue,			// command queue
-									offsetD,				// destination
-									1,						// block the source from access until this copy operation complates (1=yes, 0=no)
-									0,						// offset in destination to write to
-									count*sizeof(long),		// size to be copied
-									offset,					// source
-									0,						// # of events in the list of events to wait for
-									NULL,					// list of events to wait for
-									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
-		fatal_CL(error, __LINE__);
-
-	//==================================================50
 	//	keysD
 	//==================================================50
 
@@ -523,13 +493,9 @@ kernel_gpu_opencl_wrapper(	record *records,
 	clSetKernelArg(	kernel, 
 					5, 
 					sizeof(cl_mem), 
-					(void *) &offsetD);
-	clSetKernelArg(	kernel, 
-					6, 
-					sizeof(cl_mem), 
 					(void *) &keysD);
 	clSetKernelArg(	kernel, 
-					7, 
+					6, 
 					sizeof(cl_mem), 
 					(void *) &ansD);
 
@@ -609,7 +575,6 @@ kernel_gpu_opencl_wrapper(	record *records,
 	clReleaseMemObject(knodesD);
 
 	clReleaseMemObject(currKnodeD);
-	clReleaseMemObject(offsetD);
 	clReleaseMemObject(keysD);
 	clReleaseMemObject(ansD);
 

@@ -17,6 +17,8 @@
 #include <stdio.h>								// (in directory known to compiler)
 #include <limits.h>								// (in directory known to compiler)
 
+#define OUTPUT
+
 //======================================================================================================================================================150
 //	MAIN FUNCTION HEADER
 //======================================================================================================================================================150
@@ -228,7 +230,7 @@ main(	int argc,
 		if (written > 0 && (size_t)written < sizeof(output_full)) {
 			output_path = output_full;
 		} else {
-			fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
 		}
 	}
 	write_data(	output_path,

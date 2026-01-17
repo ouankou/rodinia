@@ -74,10 +74,16 @@ OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
 export RODINIA_OUTPUT_DIR="${OUT_DIR}"
 BIN_DIR="${BUILD_DIR}/bin/omp"
 DATA_DIR="${ROOT_DIR}/data"
+HAS_MUMMERGPU=0
 
 if [[ ! -d "${BIN_DIR}" ]]; then
   echo "Missing OpenMP bin directory: ${BIN_DIR}" >&2
   exit 1
+fi
+if [[ -x "${BIN_DIR}/mummergpu" ]]; then
+  HAS_MUMMERGPU=1
+else
+  RUN_MUMMERGPU=0
 fi
 
 should_run() {
@@ -239,11 +245,11 @@ if should_run srad_v2; then
     "${BIN_DIR}/srad_v2 2048 2048 0 127 0 127 ${THREADS} 0.5 2"
 fi
 
-if [[ ${RUN_MUMMERGPU} -eq 1 ]] && should_run mummergpu; then
-  if [[ ! -x "${BIN_DIR}/mummergpu" ]]; then
-    echo "Missing mummergpu binary in ${BIN_DIR}; configure with CUDA and enable mummergpu." >&2
-    exit 1
+if should_run mummergpu; then
+  if [[ ${RUN_MUMMERGPU} -eq 1 ]]; then
+    run_cmd mummergpu "${ROOT_DIR}/openmp/mummergpu" \
+      "${BIN_DIR}/mummergpu -C ${DATA_DIR}/mummergpu/NC_003997.fna ${DATA_DIR}/mummergpu/NC_003997_q100bp.fna > ${OUT_DIR}/mummergpu.out"
+  elif [[ ${HAS_MUMMERGPU} -eq 0 ]]; then
+    echo "Skipping mummergpu: missing binary in ${BIN_DIR}; configure with CUDA to enable." >&2
   fi
-  run_cmd mummergpu "${ROOT_DIR}/openmp/mummergpu" \
-    "${BIN_DIR}/mummergpu -C ${DATA_DIR}/mummergpu/NC_003997.fna ${DATA_DIR}/mummergpu/NC_003997_q100bp.fna > ${OUT_DIR}/mummergpu.out"
 fi

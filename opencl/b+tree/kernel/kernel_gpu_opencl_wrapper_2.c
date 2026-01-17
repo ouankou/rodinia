@@ -47,9 +47,7 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 							int count,
 
 							long *currKnode,
-							long *offset,
 							long *lastKnode,
-							long *offset_2,
 							int *start,
 							int *end,
 							int *recstart,
@@ -291,37 +289,11 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
-	//	offsetD
-	//==================================================50
-
-	cl_mem offsetD;
-	offsetD = clCreateBuffer(	context, 
-								CL_MEM_READ_WRITE, 
-								count*sizeof(long), 
-								NULL, 
-								&error );
-	if (error != CL_SUCCESS) 
-		fatal_CL(error, __LINE__);
-
-	//==================================================50
 	//	lastKnodeD
 	//==================================================50
 
 	cl_mem lastKnodeD;
 	lastKnodeD = clCreateBuffer(context, 
-								CL_MEM_READ_WRITE, 
-								count*sizeof(long), 
-								NULL, 
-								&error );
-	if (error != CL_SUCCESS) 
-		fatal_CL(error, __LINE__);
-
-	//==================================================50
-	//	offset_2D
-	//==================================================50
-
-	cl_mem offset_2D;
-	offset_2D = clCreateBuffer(context, 
 								CL_MEM_READ_WRITE, 
 								count*sizeof(long), 
 								NULL, 
@@ -440,22 +412,6 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 		fatal_CL(error, __LINE__);
 
 	//==================================================50
-	//	offsetD
-	//==================================================50
-
-	error = clEnqueueWriteBuffer(	command_queue,			// command queue
-									offsetD,				// destination
-									1,						// block the source from access until this copy operation complates (1=yes, 0=no)
-									0,						// offset in destination to write to
-									count*sizeof(long),		// size to be copied
-									offset,					// source
-									0,						// # of events in the list of events to wait for
-									NULL,					// list of events to wait for
-									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
-		fatal_CL(error, __LINE__);
-
-	//==================================================50
 	//	lastKnodeD
 	//==================================================50
 
@@ -465,22 +421,6 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 									0,						// offset in destination to write to
 									count*sizeof(long),		// size to be copied
 									lastKnode,				// source
-									0,						// # of events in the list of events to wait for
-									NULL,					// list of events to wait for
-									NULL);					// ID of this operation to be used by waiting operations
-	if (error != CL_SUCCESS) 
-		fatal_CL(error, __LINE__);
-
-	//==================================================50
-	//	offset_2D
-	//==================================================50
-
-	error = clEnqueueWriteBuffer(	command_queue,			// command queue
-									offset_2D,				// destination
-									1,						// block the source from access until this copy operation complates (1=yes, 0=no)
-									0,						// offset in destination to write to
-									count*sizeof(long),		// size to be copied
-									offset_2,				// source
 									0,						// # of events in the list of events to wait for
 									NULL,					// list of events to wait for
 									NULL);					// ID of this operation to be used by waiting operations
@@ -604,29 +544,21 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 	clSetKernelArg(	kernel, 
 					4, 
 					sizeof(cl_mem), 
-					(void *) &offsetD);
+					(void *) &lastKnodeD);
 	clSetKernelArg(	kernel, 
 					5, 
 					sizeof(cl_mem), 
-					(void *) &lastKnodeD);
+					(void *) &startD);
 	clSetKernelArg(	kernel, 
 					6, 
 					sizeof(cl_mem), 
-					(void *) &offset_2D);
+					(void *) &endD);
 	clSetKernelArg(	kernel, 
 					7, 
 					sizeof(cl_mem), 
-					(void *) &startD);
-	clSetKernelArg(	kernel, 
-					8, 
-					sizeof(cl_mem), 
-					(void *) &endD);
-	clSetKernelArg(	kernel, 
-					9, 
-					sizeof(cl_mem), 
 					(void *) &ansDStart);
 	clSetKernelArg(	kernel, 
-					10, 
+					8, 
 					sizeof(cl_mem), 
 					(void *) &ansDLength);
 
@@ -721,9 +653,7 @@ kernel_gpu_opencl_wrapper_2(knode *knodes,
 	clReleaseMemObject(knodesD);
 
 	clReleaseMemObject(currKnodeD);
-	clReleaseMemObject(offsetD);
 	clReleaseMemObject(lastKnodeD);
-	clReleaseMemObject(offset_2D);
 	clReleaseMemObject(startD);
 	clReleaseMemObject(endD);
 	clReleaseMemObject(ansDStart);

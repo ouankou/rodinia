@@ -1034,7 +1034,8 @@ int main(int argc, char **argv)
                 free(d->outFilename);
                 d->outFilename = strdup(output_full);
             } else {
-                std::cerr << "Warning: output path too long, using " << d->outFilename << std::endl;
+                std::cerr << "Warning: constructed output path is too long, falling back to '"
+                          << d->outFilename << "'" << std::endl;
             }
         }
     } else {

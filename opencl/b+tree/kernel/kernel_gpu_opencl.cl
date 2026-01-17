@@ -63,7 +63,6 @@ findK(	long height,
 		__global record *recordsD,
 
 		__global long *currKnodeD,
-		__global long *offsetD,
 		__global int *keysD, 
 		__global record *ansD)
 {
@@ -71,28 +70,32 @@ findK(	long height,
 	// private thread IDs
 	int thid = get_local_id(0);
 	int bid = get_group_id(0);
+	int threadsPerBlock = get_local_size(0);
 
 	// processtree levels
 	int i;
 	for(i = 0; i < height; i++){
 
-		// if value is between the two keys
-		if((knodesD[currKnodeD[bid]].keys[thid]) <= keysD[bid] && (knodesD[currKnodeD[bid]].keys[thid+1] > keysD[bid])){
-			// this conditional statement is inserted to avoid crush due to but in original code
-			// "offset[bid]" calculated below that addresses knodes[] in the next iteration goes outside of its bounds cause segmentation fault
-			// more specifically, values saved into knodes->indices in the main function are out of bounds of knodes that they address
-			if(knodesD[offsetD[bid]].indices[thid] < knodes_elem){
-				offsetD[bid] = knodesD[offsetD[bid]].indices[thid];
+		// Avoid data races by letting a single work-item update traversal state.
+		if(thid == 0){
+			long curr = currKnodeD[bid];
+			long next = curr;
+			int k;
+			for(k = 0; k < threadsPerBlock; k++){
+				int key_left = knodesD[curr].keys[k];
+				int key_right = knodesD[curr].keys[k+1];
+				if((key_left <= keysD[bid]) && (key_right > keysD[bid])){
+					long candidate = (long)knodesD[curr].indices[k];
+					// Guard against invalid indices.
+					if(candidate < knodes_elem){
+						next = candidate;
+					}
+					break;
+				}
 			}
+			currKnodeD[bid] = next;
 		}
-		//__syncthreads();
-		barrier(CLK_LOCAL_MEM_FENCE);
-		// set for next tree level
-		if(thid==0){
-			currKnodeD[bid] = offsetD[bid];
-		}
-		//__syncthreads();
-		barrier(CLK_LOCAL_MEM_FENCE);
+		barrier(CLK_GLOBAL_MEM_FENCE);
 
 	}
 

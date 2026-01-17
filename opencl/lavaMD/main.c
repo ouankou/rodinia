@@ -45,6 +45,8 @@ extern "C" {
 #include <time.h>					// (in path known to compiler)			needed by time
 #include <limits.h>					// (in path known to compiler)			needed by PATH_MAX
 
+#define OUTPUT
+
 //======================================================================================================================================================150
 //	UTILITIES
 //======================================================================================================================================================150
@@ -257,8 +259,8 @@ main(	int argc,
 	//	PARAMETERS, DISTANCE, CHARGE AND FORCE
 	//====================================================================================================100
 
-	// random generator seed set to random value - time in this case
-	srand(time(NULL));
+	// random generator seed set to deterministic value for repeatability
+	srand(7);
 
 	// input (distances)
 	rv_cpu = (FOUR_VECTOR*)malloc(dim_cpu.space_mem);
@@ -323,7 +325,7 @@ main(	int argc,
 		if (written > 0 && (size_t)written < sizeof(output_full)) {
 			output_path = output_full;
 		} else {
-			fprintf(stderr, "Warning: output path too long, using %s\n", output_path);
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
 		}
 	}
 	fptr = fopen(output_path, "w");	

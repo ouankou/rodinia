@@ -77,6 +77,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <limits.h>
 
 #include <omp.h>
 
@@ -325,6 +326,36 @@ int main(int argc, char *argv []){
 			// }
 		// }
 	// }
+
+	// print results to file
+	FILE *pFile;
+	const char *output_path = "output.txt";
+	char output_full[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_full, sizeof(output_full), "%s/%s", output_dir, output_path);
+		if (written > 0 && (size_t)written < sizeof(output_full)) {
+			output_path = output_full;
+		} else {
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
+		}
+	}
+	pFile = fopen(output_path, "w");
+	if (pFile == NULL) {
+		perror(output_path);
+		return 1;
+	}
+	int k;
+	for(i=0; i<workload; i++){
+		fprintf(pFile, "WORKLOAD %d:\n", i);
+		for(j=0; j<(xmax+1); j++){
+			fprintf(pFile, "\tTIME %d:\n", j);
+			for(k=0; k<EQUATIONS; k++){
+				fprintf(pFile, "\t\ty[%d][%d][%d]=%10.7e\n", i, j, k, y[i][j][k]);
+			}
+		}
+	}
+	fclose(pFile);
 
 	time4 = get_time();
 

@@ -1880,7 +1880,7 @@ main(	int argc,
 		if (written > 0 && (size_t)written < sizeof(output_path)) {
 			output = output_path;
 		} else {
-			fprintf(stderr, "Warning: output path too long, using %s\n", output);
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output);
 		}
 	}
 	FILE * pFile;
@@ -2190,12 +2190,6 @@ main(	int argc,
 				// INPUT: offset CPU initialization
 				memset(currKnode, 0, count*sizeof(long));
 
-				// INPUT: offset CPU allocation
-				long *offset;
-				offset = (long *)malloc(count*sizeof(long));
-				// INPUT: offset CPU initialization
-				memset(offset, 0, count*sizeof(long));
-
 				// INPUT: keys CPU allocation
 				int *keys;
 				keys = (int *)malloc(count*sizeof(int));
@@ -2224,7 +2218,6 @@ main(	int argc,
 											count,
 
 											currKnode,
-											offset,
 											keys,
 											ans);
 
@@ -2244,7 +2237,6 @@ main(	int argc,
 
 				// free memory
 				free(currKnode);
-				free(offset);
 				free(keys);
 				free(ans);
 
@@ -2315,23 +2307,11 @@ main(	int argc,
 				// INPUT: offset CPU initialization
 				memset (currKnode, 0, count*sizeof(long));
 
-				// INPUT: offset CPU allocation
-				long *offset;
-				offset = (long *)malloc(count*sizeof(long));
-				// INPUT: offset CPU initialization
-				memset (offset, 0, count*sizeof(long));
-
 				// INPUT: lastKnode CPU allocation
 				long *lastKnode;
 				lastKnode = (long *)malloc(count*sizeof(long));
 				// INPUT: offset CPU initialization
 				memset (lastKnode, 0, count*sizeof(long));
-
-				// INPUT: offset_2 CPU allocation
-				long *offset_2;
-				offset_2 = (long *)malloc(count*sizeof(long));
-				// INPUT: offset CPU initialization
-				memset (offset_2, 0, count*sizeof(long));
 
 				// INPUT: start, end CPU allocation
 				int *start;
@@ -2370,9 +2350,7 @@ main(	int argc,
 											count,
 
 											currKnode,
-											offset,
 											lastKnode,
-											offset_2,
 											start,
 											end,
 											recstart,
@@ -2394,9 +2372,7 @@ main(	int argc,
 
 				// free memory
 				free(currKnode);
-				free(offset);
 				free(lastKnode);
-				free(offset_2);
 				free(start);
 				free(end);
 				free(recstart);

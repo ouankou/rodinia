@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdio.h>
+#include <limits.h>
 #include <omp.h>
 
 #include "define.c"
@@ -339,7 +341,18 @@ int main(int argc, char *argv []){
 	// 	WRITE IMAGE AFTER PROCESSING
 	//================================================================================80
 
-	write_graphics(	"image_out.pgm",
+	const char *output_file = "image_out.pgm";
+	char output_path[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, output_file);
+		if (written > 0 && (size_t)written < sizeof(output_path)) {
+			output_file = output_path;
+		} else {
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_file);
+		}
+	}
+	write_graphics(	output_file,
 								image,
 								Nr,
 								Nc,
@@ -384,5 +397,3 @@ int main(int argc, char *argv []){
 //====================================================================================================100
 
 }
-
-

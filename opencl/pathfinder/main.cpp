@@ -89,6 +89,11 @@ void fatal(char *s)
 int main(int argc, char** argv)
 {
 	init(argc, argv);
+	int *data_snapshot = new int[cols];
+	for (int i = 0; i < cols; i++)
+	{
+		data_snapshot[i] = data[i];
+	}
 	
 	// Pyramid parameters.
 	int borderCols = (pyramid_height) * HALO;
@@ -197,7 +202,7 @@ int main(int argc, char** argv)
 	
 #ifdef BENCH_PRINT
 	for (int i = 0; i < cols; i++)
-		printf("%d ", data[i]);
+		printf("%d ", data_snapshot[i]);
 	printf("\n");
 	for (int i = 0; i < cols; i++)
 		printf("%d ", result[i]);
@@ -205,6 +210,7 @@ int main(int argc, char** argv)
 #endif
 
 	// Memory cleanup here.
+	delete[] data_snapshot;
 	delete[] data;
 	delete[] wall;
 	delete[] result;

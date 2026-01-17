@@ -263,6 +263,12 @@ int bpnn_train_kernel(BPNN *net, float *eo, float *eh)
 	bpnn_layerforward(net->hidden_units, net->output_units, net->hidden_weights, hid, out);
 	bpnn_output_error(net->output_delta, net->target, net->output_units, out, &out_err);
 	bpnn_hidden_error(net->hidden_delta, hid, net->output_delta, out, net->hidden_weights, net->hidden_units, &hid_err);  
+	if (eo) {
+		*eo = out_err;
+	}
+	if (eh) {
+		*eh = hid_err;
+	}
 	bpnn_adjust_weights(net->output_delta, out, net->hidden_units, hid, net->hidden_weights, net->hidden_prev_weights);
 
 	err = clEnqueueWriteBuffer(cmd_queue, hidden_delta_ocl,       1, 0, (hid + 1) * sizeof(float), net->hidden_delta, 0, 0, 0);

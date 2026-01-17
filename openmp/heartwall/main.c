@@ -8,10 +8,14 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
+#include <limits.h>
 
 #include <avilib.h>
 #include <avimod.h>
 #include <omp.h>
+
+#define OUTPUT
 
 #include "define.c"
 #include "kernel.c"
@@ -43,7 +47,19 @@ void write_data(	char* filename,
 	//	OPEN FILE FOR READING
 	//================================================================================80
 
-	fid = fopen(filename, "w+");
+	char output_path[PATH_MAX];
+	const char *output_file = filename;
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+		if (written > 0 && (size_t)written < sizeof(output_path)) {
+			output_file = output_path;
+		} else {
+			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_file);
+		}
+	}
+
+	fid = fopen(output_file, "w+");
 	if( fid == NULL ){
 		printf( "The file was not opened for writing\n" );
 		return;
