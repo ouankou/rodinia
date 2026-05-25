@@ -30,8 +30,11 @@ double dev_round_double(double value) {
 double calcLikelihoodSum(__global unsigned char * I, __global int * ind, int numOnes, int index){
 	double likelihoodSum = 0.0;
 	int x;
-	for(x = 0; x < numOnes; x++)
-		likelihoodSum += (pow((double)(I[ind[index*numOnes + x]] - 100),2) - pow((double)(I[ind[index*numOnes + x]]-228),2))/50.0;
+	for(x = 0; x < numOnes; x++) {
+		double diff1 = (double)(I[ind[index*numOnes + x]]) - 100.0;
+		double diff2 = (double)(I[ind[index*numOnes + x]]) - 228.0;
+		likelihoodSum += (diff1 * diff1 - diff2 * diff2) / 50.0;
+	}
 	return likelihoodSum;
 }
 /****************************
@@ -61,7 +64,8 @@ double d_randu(__global int * seed, int index)
 	int C = 12345;
 	int num = A*seed[index] + C;
 	seed[index] = num % M;
-	return fabs(seed[index] / ((double) M));
+	double value = fabs(seed[index] / ((double) M));
+	return value == 0.0 ? 1.0 / (double) M : value;
 }
 
 /**
@@ -176,14 +180,17 @@ __kernel void normalize_weights_kernel(__global double * weights, int Nparticles
 	int local_id = get_local_id(0);
 	__local double u1;
 	__local double sumWeights;
+	__local int bad_sum;
 
-	if(0 == local_id)
+	if(0 == local_id) {
 		sumWeights = partial_sums[0];
+		bad_sum = (!(sumWeights > 0.0) || sumWeights != sumWeights);
+	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	if(i < Nparticles) {
-		weights[i] = weights[i]/sumWeights;
+		weights[i] = bad_sum ? 1.0 / ((double) Nparticles) : weights[i]/sumWeights;
 	}
 
 	barrier(CLK_GLOBAL_MEM_FENCE);
@@ -207,17 +214,15 @@ __kernel void normalize_weights_kernel(__global double * weights, int Nparticles
 }
 
 
-__kernel void sum_kernel(__global double* partial_sums, int Nparticles)
+__kernel void sum_kernel(__global double* partial_sums, int num_blocks)
 {
 
 	int i = get_global_id(0);
-        size_t THREADS_PER_BLOCK = get_local_size(0);
 
 	if(i == 0)
 	{
 		int x;
 		double sum = 0;
-		int num_blocks = ceil((double) Nparticles / (double) THREADS_PER_BLOCK);
 		for (x = 0; x < num_blocks; x++) {
 			sum += partial_sums[x];
 		}

@@ -3,6 +3,7 @@
 
 #include "gaussianElim.h"
 #include <math.h>
+#include <vector>
 
 #ifdef RD_WG_SIZE_0_0
         #define BLOCK_SIZE_0 RD_WG_SIZE_0_0
@@ -43,7 +44,7 @@ void
 create_matrix(float *m, int size){
   int i,j;
   float lamda = -0.01;
-  float coe[2*size-1];
+  std::vector<float> coe(2*size-1);
   float coe_i =0.0;
 
   for (i=0; i < size; i++)

@@ -97,7 +97,7 @@ lud_perimeter(float *m, int matrix_dim, int offset)
   }
   __syncthreads();
 
-/* this version works ok on hardware, but not gpgpusim
+/* this version works ok on hardware
  **************************************************************
   if (threadIdx.x < BLOCK_SIZE) { //peri-row
     idx=threadIdx.x;
@@ -204,4 +204,3 @@ void lud_cuda(float *m, int matrix_dim)
   }
   lud_diagonal<<<1,BLOCK_SIZE>>>(m, matrix_dim, i);
 }
-

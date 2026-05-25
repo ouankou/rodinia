@@ -71,7 +71,6 @@ if [[ -z "${OUT_DIR}" ]]; then
 fi
 mkdir -p "${OUT_DIR}"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
-export RODINIA_OUTPUT_DIR="${OUT_DIR}"
 BIN_DIR="${BUILD_DIR}/bin/omp"
 DATA_DIR="${ROOT_DIR}/data"
 HAS_MUMMERGPU=0
@@ -111,8 +110,10 @@ run_cmd() {
   local name="$1"
   local dir="$2"
   local cmd="$3"
+  local bench_out="${OUT_DIR}/${name}"
+  mkdir -p "${bench_out}"
   echo "==> ${name}"
-  (cd "${dir}" && OMP_NUM_THREADS="${THREADS}" bash -c "${cmd}")
+  (cd "${dir}" && RODINIA_OUTPUT_DIR="${bench_out}" RODINIA_BENCH_OUTPUT_DIR="${bench_out}" OMP_NUM_THREADS="${THREADS}" bash -c "${cmd}" 2>&1 | tee "${bench_out}/run.log")
 }
 
 if [[ ! -f "${DATA_DIR}/.downloaded" ]]; then
@@ -137,22 +138,22 @@ fi
 
 if should_run cfd; then
   require_bin euler3d_cpu
-  run_cmd cfd "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/euler3d_cpu ${DATA_DIR}/cfd/fvcorr.domn.193K"
+  run_cmd cfd "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/euler3d_cpu ${DATA_DIR}/cfd/fvcorr.domn.097K"
 fi
 
 if should_run cfd_double; then
   require_bin euler3d_cpu_double
-  run_cmd cfd_double "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/euler3d_cpu_double ${DATA_DIR}/cfd/fvcorr.domn.193K"
+  run_cmd cfd_double "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/euler3d_cpu_double ${DATA_DIR}/cfd/fvcorr.domn.097K"
 fi
 
 if should_run cfd_pre; then
   require_bin pre_euler3d_cpu
-  run_cmd cfd_pre "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/pre_euler3d_cpu ${DATA_DIR}/cfd/fvcorr.domn.193K"
+  run_cmd cfd_pre "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/pre_euler3d_cpu ${DATA_DIR}/cfd/fvcorr.domn.097K"
 fi
 
 if should_run cfd_pre_double; then
   require_bin pre_euler3d_cpu_double
-  run_cmd cfd_pre_double "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/pre_euler3d_cpu_double ${DATA_DIR}/cfd/fvcorr.domn.193K"
+  run_cmd cfd_pre_double "${ROOT_DIR}/openmp/cfd" "${BIN_DIR}/pre_euler3d_cpu_double ${DATA_DIR}/cfd/fvcorr.domn.097K"
 fi
 
 if should_run heartwall; then
@@ -164,13 +165,13 @@ fi
 if should_run hotspot3d; then
   require_bin 3D
   run_cmd hotspot3d "${ROOT_DIR}/openmp/hotspot3D" \
-    "${BIN_DIR}/3D 512 8 100 ${DATA_DIR}/hotspot3D/power_512x8 ${DATA_DIR}/hotspot3D/temp_512x8 ${OUT_DIR}/hotspot3d.out"
+    "${BIN_DIR}/3D 512 8 100 ${DATA_DIR}/hotspot3D/power_512x8 ${DATA_DIR}/hotspot3D/temp_512x8 \${RODINIA_BENCH_OUTPUT_DIR}/hotspot3d.out"
 fi
 
 if should_run hotspot; then
   require_bin hotspot
   run_cmd hotspot "${ROOT_DIR}/openmp/hotspot" \
-    "${BIN_DIR}/hotspot 1024 1024 2 ${THREADS} ${DATA_DIR}/hotspot/temp_1024 ${DATA_DIR}/hotspot/power_1024 ${OUT_DIR}/hotspot.out"
+    "${BIN_DIR}/hotspot 512 512 2 ${THREADS} ${DATA_DIR}/hotspot/temp_512 ${DATA_DIR}/hotspot/power_512 \${RODINIA_BENCH_OUTPUT_DIR}/hotspot.out"
 fi
 
 if should_run kmeans; then
@@ -224,13 +225,13 @@ fi
 if should_run pathfinder; then
   require_bin pathfinder
   run_cmd pathfinder "${ROOT_DIR}/openmp/pathfinder" \
-    "${BIN_DIR}/pathfinder 100000 100 > ${OUT_DIR}/pathfinder.out"
+    "${BIN_DIR}/pathfinder 100000 100 > \${RODINIA_BENCH_OUTPUT_DIR}/pathfinder.out"
 fi
 
 if should_run streamcluster; then
   require_bin sc_omp
   run_cmd streamcluster "${ROOT_DIR}/openmp/streamcluster" \
-    "${BIN_DIR}/sc_omp 10 20 256 65536 65536 1000 none ${OUT_DIR}/streamcluster.txt ${THREADS}"
+    "${BIN_DIR}/sc_omp 10 20 256 65536 65536 1000 none \${RODINIA_BENCH_OUTPUT_DIR}/streamcluster.txt ${THREADS}"
 fi
 
 if should_run srad_v1; then
@@ -248,7 +249,7 @@ fi
 if should_run mummergpu; then
   if [[ ${RUN_MUMMERGPU} -eq 1 ]]; then
     run_cmd mummergpu "${ROOT_DIR}/openmp/mummergpu" \
-      "${BIN_DIR}/mummergpu -C ${DATA_DIR}/mummergpu/NC_003997.fna ${DATA_DIR}/mummergpu/NC_003997_q100bp.fna > ${OUT_DIR}/mummergpu.out"
+      "${BIN_DIR}/mummergpu -C ${DATA_DIR}/mummergpu/NC_003997.fna ${DATA_DIR}/mummergpu/NC_003997_q100bp.fna > \${RODINIA_BENCH_OUTPUT_DIR}/mummergpu.out"
   elif [[ ${HAS_MUMMERGPU} -eq 0 ]]; then
     echo "Skipping mummergpu: missing binary in ${BIN_DIR}; configure with CUDA to enable." >&2
   fi

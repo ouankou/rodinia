@@ -13,7 +13,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <vector>
+#include <string>
 #include "common.h"
 #include "components.h"
 #include "dwt.h"
@@ -384,9 +384,9 @@ void bwToComponent(cl_mem d_c, unsigned char * h_src, int width, int height)
 	cl_d_src = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, pixels, h_src, NULL);
 	// fatal_CL(errNum, __LINE__);
 	
-	size_t globalWorkSize[1] = { (size_t)(alignedSize / 9) };
+	size_t globalWorkSize[1] = { (size_t)alignedSize };
     size_t localWorkSize[1] = { (size_t)THREADS };
-	assert(alignedSize%(THREADS*3) == 0);
+	assert(alignedSize % THREADS == 0);
 	
 	errNum  = clSetKernelArg(c_CopySrcToComponent, 0, sizeof(cl_mem), &d_c);
 	errNum |= clSetKernelArg(c_CopySrcToComponent, 1, sizeof(cl_mem), &cl_d_src);
@@ -565,17 +565,16 @@ int writeLinear(cl_mem component, int pixWidth, int pixHeight, const char * file
 	samplesToChar(result, gpu_output, samplesNum);
 	
 	// Write component 
-	char outfile[strlen(filename) + strlen(suffix) + 1];
-    snprintf(outfile, sizeof(outfile), "%s%s", filename, suffix);
-    i = open(outfile, O_CREAT|O_WRONLY, 0644);
-	if (i == -1) 
-	{ 
-        error(0,errno,"cannot access %s", outfile);
+	std::string outfile = std::string(filename) + suffix;
+    i = open(outfile.c_str(), O_CREAT|O_WRONLY, 0644);
+	if (i == -1)
+	{
+        error(0,errno,"cannot access %s", outfile.c_str());
         return -1;
     }
-	printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
+	printf("\nWriting to %s (%d x %d)\n", outfile.c_str(), pixWidth, pixHeight);
     if (write(i, result, samplesNum) != samplesNum) {
-        error(0, errno, "short write to %s", outfile);
+        error(0, errno, "short write to %s", outfile.c_str());
         close(i);
         free(gpu_output);
         free(result);
@@ -708,19 +707,18 @@ int writeNStage2DDWT(cl_mem component, int pixWidth, int pixHeight, int stages, 
     // Write component
 	samplesToChar(result, dst, samplesNum);	
 	
-	char outfile[strlen(filename) + strlen(suffix) + 1];
-    snprintf(outfile, sizeof(outfile), "%s%s", filename, suffix);
-    i = open(outfile, O_CREAT|O_WRONLY, 0644);
-	
-    if (i == -1) 
+	std::string outfile = std::string(filename) + suffix;
+    i = open(outfile.c_str(), O_CREAT|O_WRONLY, 0644);
+
+    if (i == -1)
 	{
-        error(0,errno,"cannot access %s", outfile);
+        error(0,errno,"cannot access %s", outfile.c_str());
         return -1;
     }
-	
-    printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
+
+    printf("\nWriting to %s (%d x %d)\n", outfile.c_str(), pixWidth, pixHeight);
     if (write(i, result, samplesNum) != samplesNum) {
-        error(0, errno, "short write to %s", outfile);
+        error(0, errno, "short write to %s", outfile.c_str());
         close(i);
         free(result);
         free(src);
@@ -1034,8 +1032,8 @@ int main(int argc, char **argv)
                 free(d->outFilename);
                 d->outFilename = strdup(output_full);
             } else {
-                std::cerr << "Warning: constructed output path is too long, falling back to '"
-                          << d->outFilename << "'" << std::endl;
+                std::cerr << "Output path is too long for '" << d->outFilename << "'" << std::endl;
+                return EXIT_FAILURE;
             }
         }
     } else {

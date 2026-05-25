@@ -894,9 +894,6 @@ cl_program cl_compileProgram(char* kernelPath, char* compileoptions, bool verbos
             return clProgramReturn;       
     }
 
-    // print the ptx information
-    // printBinaries(clProgram);
-
     return clProgramReturn;
 }
 

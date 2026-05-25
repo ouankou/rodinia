@@ -103,7 +103,7 @@ int main(int argc, char** argv)
     if(strcmp(argv[1],"r")==0) {
     for (int i = 0; i < numElements; i++) {
         // Generate random floats between 0 and 1 for the input data
-		cpu_idata[i] = ((float) rand() / RAND_MAX);
+		cpu_idata[i] = (float)((double)rand() / (double)RAND_MAX);
   
         //Compare data at index to data minimum, if less than current minimum, set that element as new minimum
 		datamin = fminf(cpu_idata[i], datamin);
@@ -138,7 +138,8 @@ int main(int argc, char** argv)
         if (written > 0 && (size_t)written < sizeof(input_path)) {
             filename2 = input_path;
         } else {
-            fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", filename2);
+            fprintf(stderr, "Output path is too long for '%s'\n", filename2);
+            return EXIT_FAILURE;
         }
     }
     tp = fopen(filename2, "w");
@@ -217,7 +218,8 @@ int main(int argc, char** argv)
         if (written > 0 && (size_t)written < sizeof(output_path)) {
             filename3 = output_path;
         } else {
-            fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", filename3);
+            fprintf(stderr, "Output path is too long for '%s'\n", filename3);
+            return EXIT_FAILURE;
         }
     }
     tp1 = fopen(filename3, "w");
@@ -236,4 +238,3 @@ int main(int argc, char** argv)
 //    printf("%d \n", summy);
     return 0;
 }
-

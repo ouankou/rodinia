@@ -1,6 +1,7 @@
 #ifndef MISC_MATH_H
 #define MISC_MATH_H
 
+#include <math.h>
 #include "matrix.h"
 
 #define PI 3.14159

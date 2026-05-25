@@ -85,7 +85,8 @@ ZMAT	*a;
 ZMAT	*zm_finput(FILE *fp,ZMAT *a)
 #endif
 {
-     ZMAT        *izm_finput(),*bzm_finput();
+     ZMAT        *izm_finput(FILE *fp, ZMAT *mat);
+     ZMAT        *bzm_finput(FILE *fp, ZMAT *mat);
      
      if ( isatty(fileno(fp)) )
 	  return izm_finput(fp,a);
@@ -149,7 +150,7 @@ ZMAT     *izm_finput(FILE *fp, ZMAT *mat)
 				&mat->me[i][j].re,&mat->me[i][j].im)<1 );
 	  fprintf(stderr,"Continue: ");
 	  if (fscanf(fp, "%c", &c) != 1)
-	       error(E_INPUT,"izm_finput");
+	       error(E_INPUT, "izm_finput");
 	  if ( c == 'n' || c == 'N' )
 	  {    dynamic = FALSE;                 goto redo;      }
 	  if ( (c == 'b' || c == 'B') /* && i > 0 */ )
@@ -214,7 +215,8 @@ ZVEC     *x;
 ZVEC     *zv_finput(FILE *fp,ZVEC *x)
 #endif
 {
-     ZVEC        *izv_finput(),*bzv_finput();
+     ZVEC        *izv_finput(FILE *fp, ZVEC *vec);
+     ZVEC        *bzv_finput(FILE *fp, ZVEC *vec);
      
      if ( isatty(fileno(fp)) )
 	  return izv_finput(fp,x);

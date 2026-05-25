@@ -32,8 +32,11 @@ float dev_round_float(float value) {
 float calcLikelihoodSum(__global unsigned char * I, __global int * ind, int numOnes, int index){
 	float likelihoodSum = 0.0;
 	int x;
-	for(x = 0; x < numOnes; x++)
-		likelihoodSum += (pow((float)(I[ind[index*numOnes + x]] - 100),2) - pow((float)(I[ind[index*numOnes + x]]-228),2))/50.0;
+	for(x = 0; x < numOnes; x++) {
+		float diff1 = (float)(I[ind[index*numOnes + x]]) - 100.0f;
+		float diff2 = (float)(I[ind[index*numOnes + x]]) - 228.0f;
+		likelihoodSum += (diff1 * diff1 - diff2 * diff2) / 50.0f;
+	}
 	return likelihoodSum;
 }
 /****************************
@@ -63,7 +66,8 @@ float d_randu(__global int * seed, int index)
 	int C = 12345;
 	int num = A*seed[index] + C;
 	seed[index] = num % M;
-	return fabs(seed[index] / ((float) M));
+	float value = fabs(seed[index] / ((float) M));
+	return value == 0.0f ? 1.0f / (float) M : value;
 }
 
 /**
@@ -211,14 +215,17 @@ __kernel void normalize_weights_kernel(__global float * weights, int Nparticles,
 	int local_id = get_local_id(0);
 	__local float u1;
 	__local float sumWeights;
+	__local int bad_sum;
 
-	if(0 == local_id)
+	if(0 == local_id) {
 		sumWeights = partial_sums[0];
+		bad_sum = (!(sumWeights > 0.0f) || sumWeights != sumWeights);
+	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
 	if(i < Nparticles) {
-		weights[i] = weights[i]/sumWeights;
+		weights[i] = bad_sum ? 1.0f / ((float) Nparticles) : weights[i]/sumWeights;
 	}
 
 	barrier(CLK_GLOBAL_MEM_FENCE);

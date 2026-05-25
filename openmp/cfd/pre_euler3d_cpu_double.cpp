@@ -330,6 +330,7 @@ void compute_flux(int nelr, int* elements_surrounding_elements, double* normals,
 
 				fc_nb_density_energy.x = fc_density_energy[nb*NDIM + 0];
 				fc_nb_density_energy.y = fc_density_energy[nb*NDIM + 1];
+				fc_nb_density_energy.z = fc_density_energy[nb*NDIM + 2];
 
 				// artificial viscosity
 				factor = -normal_len*smoothing_coefficient*double(0.5)*(speed_i + std::sqrt(speed_sqd_nb) + speed_of_sound_i + speed_of_sound_nb);

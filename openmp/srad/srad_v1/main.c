@@ -349,7 +349,8 @@ int main(int argc, char *argv []){
 		if (written > 0 && (size_t)written < sizeof(output_path)) {
 			output_file = output_path;
 		} else {
-			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_file);
+			fprintf(stderr, "Output path is too long for '%s'\n", output_file);
+			exit(EXIT_FAILURE);
 		}
 	}
 	write_graphics(	output_file,

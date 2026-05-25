@@ -184,7 +184,8 @@ MAT     *m_load(FILE *fp, char **name)
 	if ( p_flag != DOUBLE_PREC && p_flag != SINGLE_PREC )
 		error(E_FORMAT,"m_load");
 	*name = (char *)malloc((unsigned)(mat.namlen)+1);
-	if ( fread(*name,sizeof(char),(unsigned)(mat.namlen),fp) != (unsigned)(mat.namlen) )
+	if ( fread(*name,sizeof(char),(unsigned)(mat.namlen),fp) !=
+	     (unsigned)(mat.namlen) )
 		error(E_FORMAT,"m_load");
 	A = m_get((unsigned)(mat.m),(unsigned)(mat.n));
 	for ( i = 0; i < A->m*A->n; i++ )
@@ -211,9 +212,8 @@ MAT     *m_load(FILE *fp, char **name)
 		if ( p_flag == DOUBLE_PREC ) {
 		    if ( fread(&d_temp,sizeof(double),1,fp) != 1 )
 			error(E_FORMAT,"m_load");
-		} else {
-		    if ( fread(&f_temp,sizeof(float),1,fp) != 1 )
-			error(E_FORMAT,"m_load");
+		} else if ( fread(&f_temp,sizeof(float),1,fp) != 1 ) {
+		    error(E_FORMAT,"m_load");
 		}
 	}
 

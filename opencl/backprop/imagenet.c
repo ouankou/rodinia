@@ -18,7 +18,7 @@ void load(BPNN *net)
 
   k = 1;
   for (i = 0; i < nr; i++) {
-	  units[k] = (float) rand()/RAND_MAX ;
+	  units[k] = (float)((double)rand() / (double)RAND_MAX);
 	  k++;
     }
 }

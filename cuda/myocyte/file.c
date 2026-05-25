@@ -15,7 +15,7 @@
 //	WRITE FUNCTION
 //========================================================================================================================
 
-void write(	char* filename,
+void write_file(	const char* filename,
 					fp* input, 
 					int data_rows, 
 					int data_cols, 
@@ -74,7 +74,7 @@ void write(	char* filename,
 //	READ FUNCTION
 //========================================================================================================================
 
-void read(	char* filename,
+void read_file(	const char* filename,
 					fp* input,
 					int data_rows, 
 					int data_cols,
@@ -105,7 +105,11 @@ void read(	char* filename,
 	if(major==0){																// if matrix is saved row major in memory (C)
 		for(i=0; i<data_rows; i++){
 			for(j=0; j<data_cols; j++){
-				fscanf(fid, "%f", &temp);
+				if (fscanf(fid, "%f", &temp) != 1) {
+					printf("The file ended before all values were read\n");
+					fclose(fid);
+					return;
+				}
 				input[i*data_cols+j] = (fp)temp;
 			}
 		}
@@ -113,7 +117,11 @@ void read(	char* filename,
 	else{																				// if matrix is saved column major in memory (MATLAB)
 		for(i=0; i<data_rows; i++){
 			for(j=0; j<data_cols; j++){
-				fscanf(fid, "%f", &temp);
+				if (fscanf(fid, "%f", &temp) != 1) {
+					printf("The file ended before all values were read\n");
+					fclose(fid);
+					return;
+				}
 				input[j*data_rows+i] = (fp)temp;
 			}
 		}

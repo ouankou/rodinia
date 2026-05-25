@@ -392,13 +392,14 @@ int main(int argc, char **argv){
 		if (written > 0 && (size_t)written < sizeof(output_full)) {
 			output_path = output_full;
 		} else {
-			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
+			fprintf(stderr, "Output path is too long for '%s'\n", output_path);
+			return EXIT_FAILURE;
 		}
 	}
 	FILE *fpo = fopen(output_path,"w");
 	fprintf(fpo, "print traceback value GPU:\n");
     
-	for (int i = max_rows - 2,  j = max_rows - 2; i>=0, j>=0;){
+	for (int i = max_rows - 2,  j = max_rows - 2; i >= 0 && j >= 0;){
 		int nw, n, w, traceback;
 		if ( i == max_rows - 2 && j == max_rows - 2 )
 			fprintf(fpo, "%d ", output_itemsets[ i * max_cols + j]); //print the first element

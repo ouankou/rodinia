@@ -147,6 +147,11 @@ func_ret_t
 lud_verify(float *m, float *lu, int matrix_dim){
   int i,j,k;
   float *tmp = (float*)malloc(matrix_dim*matrix_dim*sizeof(float));
+  func_ret_t ret = RET_SUCCESS;
+
+  if (tmp == NULL) {
+    return RET_FAILURE;
+  }
 
   for (i=0; i < matrix_dim; i ++)
     for (j=0; j< matrix_dim; j++) {
@@ -186,13 +191,15 @@ lud_verify(float *m, float *lu, int matrix_dim){
 
   for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim; j++){
-          if ( fabs(m[i*matrix_dim+j]-tmp[i*matrix_dim+j]) > 0.0001)
+          if ( fabs(m[i*matrix_dim+j]-tmp[i*matrix_dim+j]) > 0.0001) {
             printf("dismatch at (%d, %d): (o)%f (n)%f\n", i, j, m[i*matrix_dim+j], tmp[i*matrix_dim+j]);
+            ret = RET_FAILURE;
+          }
       }
   }
   free(tmp);
 
-  return RET_SUCCESS;
+  return ret;
 }
 
 void
@@ -221,8 +228,12 @@ create_matrix(float **mp, int size){
   float *m;
   int i,j;
   float lamda = -0.001;
-  float coe[2*size-1];
+  float *coe = (float *)malloc(sizeof(float)*(2*size-1));
   float coe_i =0.0;
+
+  if (coe == NULL) {
+      return RET_FAILURE;
+  }
 
   for (i=0; i < size; i++)
     {
@@ -235,6 +246,7 @@ create_matrix(float **mp, int size){
 
   m = (float*) malloc(sizeof(float)*size*size);
   if ( m == NULL) {
+      free(coe);
       return RET_FAILURE;
   }
 
@@ -246,5 +258,6 @@ create_matrix(float **mp, int size){
 
   *mp = m;
 
+  free(coe);
   return RET_SUCCESS;
 }

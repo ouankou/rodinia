@@ -130,6 +130,7 @@ static cudaTextureObject_t create_array_texture(cudaArray_t array,
 	return obj;
 }
 
+#if (REFTEX && !REORDER_REF) || (NODETEX && !REORDER_TREE) || (CHILDTEX && !REORDER_TREE) || QRYTEX
 static cudaTextureObject_t create_linear_texture(const void *dev_ptr,
                                                  cudaChannelFormatDesc desc,
                                                  size_t bytes)
@@ -151,6 +152,7 @@ static cudaTextureObject_t create_linear_texture(const void *dev_ptr,
 	++num_bind_tex_calls;
 	return obj;
 }
+#endif
 
 static void destroy_texture_object(cudaTextureObject_t *obj)
 {

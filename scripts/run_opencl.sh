@@ -56,7 +56,6 @@ if [[ -z "${OUT_DIR}" ]]; then
 fi
 mkdir -p "${OUT_DIR}"
 OUT_DIR="$(cd "${OUT_DIR}" && pwd)"
-export RODINIA_OUTPUT_DIR="${OUT_DIR}"
 BIN_DIR="${BUILD_DIR}/bin/opencl"
 DATA_DIR="${ROOT_DIR}/data"
 
@@ -110,8 +109,10 @@ run_cmd() {
   local name="$1"
   local dir="$2"
   local cmd="$3"
+  local bench_out="${OUT_DIR}/${name}"
+  mkdir -p "${bench_out}"
   echo "==> ${name}"
-  (cd "${dir}" && bash -c "${cmd}")
+  (cd "${dir}" && RODINIA_OUTPUT_DIR="${bench_out}" RODINIA_BENCH_OUTPUT_DIR="${bench_out}" bash -c "${cmd}" 2>&1 | tee "${bench_out}/run.log")
 }
 
 if should_run backprop; then
@@ -169,7 +170,7 @@ if should_run hotspot; then
   require_data "${DATA_DIR}/hotspot/temp_512"
   require_data "${DATA_DIR}/hotspot/power_512"
   run_cmd hotspot "${ROOT_DIR}/opencl/hotspot" \
-    "${BIN_DIR}/hotspot 512 2 2 ${DATA_DIR}/hotspot/temp_512 ${DATA_DIR}/hotspot/power_512 ${OUT_DIR}/hotspot.out"
+    "${BIN_DIR}/hotspot 512 2 2 ${DATA_DIR}/hotspot/temp_512 ${DATA_DIR}/hotspot/power_512 \${RODINIA_BENCH_OUTPUT_DIR}/hotspot.out"
 fi
 
 if should_run hotspot3d; then
@@ -177,7 +178,7 @@ if should_run hotspot3d; then
   require_data "${DATA_DIR}/hotspot3D/power_512x8"
   require_data "${DATA_DIR}/hotspot3D/temp_512x8"
   run_cmd hotspot3d "${ROOT_DIR}/opencl/hotspot3D" \
-    "${BIN_DIR}/3D 512 8 100 ${DATA_DIR}/hotspot3D/power_512x8 ${DATA_DIR}/hotspot3D/temp_512x8 ${OUT_DIR}/hotspot3d.out"
+    "${BIN_DIR}/3D 512 8 100 ${DATA_DIR}/hotspot3D/power_512x8 ${DATA_DIR}/hotspot3D/temp_512x8 \${RODINIA_BENCH_OUTPUT_DIR}/hotspot3d.out"
 fi
 
 if should_run hybridsort; then
@@ -200,7 +201,7 @@ if should_run leukocyte; then
   require_bin leukocyte
   require_data "${DATA_DIR}/leukocyte/testfile.avi"
   run_cmd leukocyte "${ROOT_DIR}/opencl/leukocyte/OpenCL" \
-    "${BIN_DIR}/leukocyte ${DATA_DIR}/leukocyte/testfile.avi 10"
+    "${BIN_DIR}/leukocyte ${DATA_DIR}/leukocyte/testfile.avi 5"
 fi
 
 if should_run lud; then
@@ -228,8 +229,8 @@ if should_run particlefilter_double; then
   require_bin OCL_particlefilter_double
   run_cmd particlefilter_double "${ROOT_DIR}/opencl/particlefilter" \
     "${BIN_DIR}/OCL_particlefilter_double -x 128 -y 128 -z 10 -np 400000"
-  if [[ -f "${OUT_DIR}/output.txt" ]]; then
-    mv "${OUT_DIR}/output.txt" "${OUT_DIR}/particlefilter_double_output.txt"
+  if [[ -f "${OUT_DIR}/particlefilter_double/output.txt" ]]; then
+    mv "${OUT_DIR}/particlefilter_double/output.txt" "${OUT_DIR}/particlefilter_double/particlefilter_double_output.txt"
   fi
 fi
 
@@ -237,8 +238,8 @@ if should_run particlefilter_single; then
   require_bin OCL_particlefilter_single
   run_cmd particlefilter_single "${ROOT_DIR}/opencl/particlefilter" \
     "${BIN_DIR}/OCL_particlefilter_single -x 128 -y 128 -z 10 -np 400000"
-  if [[ -f "${OUT_DIR}/output.txt" ]]; then
-    mv "${OUT_DIR}/output.txt" "${OUT_DIR}/particlefilter_single_output.txt"
+  if [[ -f "${OUT_DIR}/particlefilter_single/output.txt" ]]; then
+    mv "${OUT_DIR}/particlefilter_single/output.txt" "${OUT_DIR}/particlefilter_single/particlefilter_single_output.txt"
   fi
 fi
 
@@ -246,25 +247,25 @@ if should_run particlefilter_naive; then
   require_bin OCL_particlefilter_naive
   run_cmd particlefilter_naive "${ROOT_DIR}/opencl/particlefilter" \
     "${BIN_DIR}/OCL_particlefilter_naive -x 128 -y 128 -z 10 -np 10000"
-  if [[ -f "${OUT_DIR}/output.txt" ]]; then
-    mv "${OUT_DIR}/output.txt" "${OUT_DIR}/particlefilter_naive_output.txt"
+  if [[ -f "${OUT_DIR}/particlefilter_naive/output.txt" ]]; then
+    mv "${OUT_DIR}/particlefilter_naive/output.txt" "${OUT_DIR}/particlefilter_naive/particlefilter_naive_output.txt"
   fi
 fi
 
 if should_run pathfinder; then
   require_bin pathfinder
   run_cmd pathfinder "${ROOT_DIR}/opencl/pathfinder" \
-    "${BIN_DIR}/pathfinder 100000 100 20 > ${OUT_DIR}/pathfinder.txt"
+    "${BIN_DIR}/pathfinder 100000 100 20 > \${RODINIA_BENCH_OUTPUT_DIR}/pathfinder.txt"
 fi
 
 if should_run srad; then
   require_bin srad
   run_cmd srad "${ROOT_DIR}/opencl/srad" \
-    "${BIN_DIR}/srad 100 0.5 502 458 \"${OUT_DIR}/srad_image_out.pgm\""
+    "${BIN_DIR}/srad 100 0.5 502 458 \"\${RODINIA_BENCH_OUTPUT_DIR}/image_out.pgm\""
 fi
 
 if should_run streamcluster; then
   require_bin streamcluster
   run_cmd streamcluster "${ROOT_DIR}/opencl/streamcluster" \
-    "${BIN_DIR}/streamcluster 10 20 256 65536 65536 1000 none ${OUT_DIR}/streamcluster.txt 1 -t gpu -d 0"
+    "${BIN_DIR}/streamcluster 10 20 256 65536 65536 1000 none \${RODINIA_BENCH_OUTPUT_DIR}/streamcluster.txt 1 -t gpu -d 0"
 fi

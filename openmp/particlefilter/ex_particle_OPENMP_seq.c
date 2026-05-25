@@ -10,6 +10,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <omp.h>
+#include <float.h>
 #include <limits.h>
 #define PI 3.1415926535897932
 /**
@@ -80,7 +81,8 @@ double randu(int * seed, int index)
 {
 	int num = A*seed[index] + C;
 	seed[index] = num % M;
-	return fabs(seed[index]/((double) M));
+	double value = fabs(seed[index]/((double) M));
+	return value == 0.0 ? 1.0 / (double)M : value;
 }
 /**
 * Generates a normally distributed random number using the Box-Muller transformation
@@ -128,8 +130,7 @@ void strelDisk(int * disk, int radius)
 	for(x = 0; x < diameter; x++){
 		for(y = 0; y < diameter; y++){
 			double distance = sqrt(pow((double)(x-radius+1),2) + pow((double)(y-radius+1),2));
-			if(distance < radius)
-			disk[x*diameter + y] = 1;
+			disk[x*diameter + y] = (distance < radius) ? 1 : 0;
 		}
 	}
 }
@@ -227,6 +228,7 @@ void getneighbors(int * se, int numOnes, double * neighbors, int radius){
 void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 	int k;
 	int max_size = IszX*IszY*Nfr;
+	memset(I, 0, sizeof(int)*max_size);
 	/*get object centers*/
 	int x0 = (int)roundDouble(IszY/2.0);
 	int y0 = (int)roundDouble(IszX/2.0);
@@ -242,9 +244,9 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 		pos = 0;
 		I[pos] = 1;
 	}
-	
+
 	/*dilate matrix*/
-	int * newMatrix = (int *)malloc(sizeof(int)*IszX*IszY*Nfr);
+	int * newMatrix = (int *)calloc(max_size, sizeof(int));
 	imdilate_disk(I, IszX, IszY, Nfr, 5, newMatrix);
 	int x, y;
 	for(x = 0; x < IszX; x++){
@@ -443,9 +445,10 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		}
 		long long sum_time = get_time();
 		printf("TIME TO SUM WEIGHTS TOOK: %f\n", elapsed_time(exponential, sum_time));
+		int bad_sum = (sumWeights <= 0.0) || !isfinite(sumWeights) || (sumWeights > DBL_MAX);
 		#pragma omp parallel for shared(sumWeights, weights) private(x)
 		for(x = 0; x < Nparticles; x++){
-			weights[x] = weights[x]/sumWeights;
+			weights[x] = bad_sum ? 1/((double)Nparticles) : weights[x]/sumWeights;
 		}
 		long long normalize = get_time();
 		printf("TIME TO NORMALIZE WEIGHTS TOOK: %f\n", elapsed_time(sum_time, normalize));
@@ -583,9 +586,9 @@ int main(int argc, char * argv[]){
 	int * seed = (int *)malloc(sizeof(int)*Nparticles);
 	int i;
 	for(i = 0; i < Nparticles; i++)
-		seed[i] = (int)((unsigned int)i * 1664525u + 1013904223u);
+		seed[i] = i + 1;
 	//malloc matrix
-	int * I = (int *)malloc(sizeof(int)*IszX*IszY*Nfr);
+	int * I = (int *)calloc(IszX*IszY*Nfr, sizeof(int));
 	long long start = get_time();
 	//call video sequence
 	videoSequence(I, IszX, IszY, Nfr, seed);

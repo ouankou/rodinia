@@ -49,22 +49,9 @@ struct dwt {
     int dwtLvls;
 };
 
-int getImg(char * srcFilename, unsigned char *srcImg, int inputSize)
+int getImg(const char * srcFilename, unsigned char *srcImg, int inputSize)
 {
-    // printf("Loading ipnput: %s\n", srcFilename);
-    char *path = "../../data/dwt2d/";
-    char *newSrc = NULL;
-    
-    if((newSrc = (char *)malloc(strlen(srcFilename)+strlen(path)+1)) != NULL)
-    {
-        newSrc[0] = '\0';
-        strcat(newSrc, path);
-        strcat(newSrc, srcFilename);
-        srcFilename= newSrc;
-    }
-    printf("Loading ipnput: %s\n", srcFilename);
-
-    //srcFilename = strcat("../../data/dwt2d/",srcFilename);
+    printf("Loading input: %s\n", srcFilename);
     //read image
     int i = open(srcFilename, O_RDONLY, 0644);
     if (i == -1) { 
@@ -293,10 +280,9 @@ int main(int argc, char **argv)
             return -1;
         }
     }
-	argc -= optind;
-	argv += optind;
+    int remainingArgs = argc - optind;
 
-    if (argc == 0) { // at least one filename is expected
+    if (remainingArgs == 0) { // at least one filename is expected
         printf("Please supply src file name\n");
         usage();
         return -1;
@@ -345,14 +331,15 @@ int main(int argc, char **argv)
     d->dwtLvls  = dwtLvls;
 
     // file names
-    d->srcFilename = (char *)malloc(strlen(argv[0]));
-    strcpy(d->srcFilename, argv[0]);
-    if (argc == 1) { // only one filename supplyed
-        d->outFilename = (char *)malloc(strlen(d->srcFilename)+4);
+    const char *srcFilename = argv[optind];
+    d->srcFilename = (char *)malloc(strlen(srcFilename) + 1);
+    strcpy(d->srcFilename, srcFilename);
+    if (remainingArgs == 1) { // only one filename supplied
+        d->outFilename = (char *)malloc(strlen(d->srcFilename) + strlen(".dwt") + 1);
         strcpy(d->outFilename, d->srcFilename);
         strcpy(d->outFilename+strlen(d->srcFilename), ".dwt");
     } else {
-        d->outFilename = strdup(argv[1]);
+        d->outFilename = strdup(argv[optind + 1]);
     }
 
     //Input review

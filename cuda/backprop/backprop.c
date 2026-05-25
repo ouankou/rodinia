@@ -10,6 +10,8 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include "backprop.h"
 #include <math.h>
 //#define OPEN
@@ -18,12 +20,26 @@
 
 #define fastcopy(to,from,len)\
 {\
-  register char *_to,*_from;\
-  register int _i,_l;\
+  char *_to,*_from;\
+  int _i,_l;\
   _to = (char *)(to);\
   _from = (char *)(from);\
   _l = (len);\
   for (_i = 0; _i < _l; _i++) *_to++ = *_from++;\
+}
+
+static int read_full(int fd, void *buf, size_t len)
+{
+  size_t total = 0;
+  char *ptr = (char *)buf;
+  while (total < len) {
+    ssize_t n = read(fd, ptr + total, len - total);
+    if (n <= 0) {
+      return -1;
+    }
+    total += (size_t)n;
+  }
+  return 0;
 }
 
 /*** Return random number between 0.0 and 1.0 ***/
@@ -40,8 +56,7 @@ float dpn1()
 
 /*** The squashing function.  Currently, it's a sigmoid. ***/
 
-float squash(x)
-float x;
+float squash(float x)
 {
   float m;
   //x = -x;
@@ -53,8 +68,7 @@ float x;
 
 /*** Allocate 1d array of floats ***/
 
-float *alloc_1d_dbl(n)
-int n;
+float *alloc_1d_dbl(int n)
 {
   float *new;
 
@@ -69,8 +83,7 @@ int n;
 
 /*** Allocate 2d array of floats ***/
 
-float **alloc_2d_dbl(m, n)
-int m, n;
+float **alloc_2d_dbl(int m, int n)
 {
   int i;
   float **new;
@@ -89,23 +102,19 @@ int m, n;
 }
 
 
-bpnn_randomize_weights(w, m, n)
-float **w;
-int m, n;
+void bpnn_randomize_weights(float **w, int m, int n)
 {
   int i, j;
 
   for (i = 0; i <= m; i++) {
     for (j = 0; j <= n; j++) {
-     w[i][j] = (float) rand()/RAND_MAX;
+     w[i][j] = (float) rand()/(float)RAND_MAX;
     //  w[i][j] = dpn1();
     }
   }
 }
 
-bpnn_randomize_row(w, m)
-float *w;
-int m;
+void bpnn_randomize_row(float *w, int m)
 {
 	int i;
 	for (i = 0; i <= m; i++) {
@@ -115,9 +124,7 @@ int m;
 }
 
 
-bpnn_zero_weights(w, m, n)
-float **w;
-int m, n;
+void bpnn_zero_weights(float **w, int m, int n)
 {
   int i, j;
 
@@ -129,15 +136,14 @@ int m, n;
 }
 
 
-void bpnn_initialize(seed)
+void bpnn_initialize(int seed)
 {
   printf("Random number generator seed: %d\n", seed);
   srand(seed);
 }
 
 
-BPNN *bpnn_internal_create(n_in, n_hidden, n_out)
-int n_in, n_hidden, n_out;
+BPNN *bpnn_internal_create(int n_in, int n_hidden, int n_out)
 {
   BPNN *newnet;
 
@@ -168,8 +174,7 @@ int n_in, n_hidden, n_out;
 }
 
 
-void bpnn_free(net)
-BPNN *net;
+void bpnn_free(BPNN *net)
 {
   int n1, n2, i;
 
@@ -211,8 +216,7 @@ BPNN *net;
      error computations, etc).
 ***/
 
-BPNN *bpnn_create(n_in, n_hidden, n_out)
-int n_in, n_hidden, n_out;
+BPNN *bpnn_create(int n_in, int n_hidden, int n_out)
 {
 
   BPNN *newnet;
@@ -232,9 +236,7 @@ int n_in, n_hidden, n_out;
 }
 
 
-void bpnn_layerforward(l1, l2, conn, n1, n2)
-float *l1, *l2, **conn;
-int n1, n2;
+void bpnn_layerforward(float *l1, float *l2, float **conn, int n1, int n2)
 {
   float sum;
   int j, k;
@@ -258,9 +260,7 @@ int n1, n2;
 }
 
 //extern "C"
-void bpnn_output_error(delta, target, output, nj, err)  
-float *delta, *target, *output, *err;
-int nj;
+void bpnn_output_error(float *delta, float *target, float *output, int nj, float *err)
 {
   int j;
   float o, t, errsum;
@@ -275,15 +275,13 @@ int nj;
 }
 
 
-void bpnn_hidden_error(delta_h,   
-					   nh, 
-					   delta_o, 
-					   no, 
-					   who, 
-					   hidden, 
-					   err)
-float *delta_h, *delta_o, *hidden, **who, *err;
-int nh, no;
+void bpnn_hidden_error(float *delta_h,
+					   int nh,
+					   float *delta_o,
+					   int no,
+					   float **who,
+					   float *hidden,
+					   float *err)
 {
   int j, k;
   float h, sum, errsum;
@@ -302,8 +300,7 @@ int nh, no;
 }
 
 
-void bpnn_adjust_weights(delta, ndelta, ly, nly, w, oldw)
-float *delta, *ly, **w, **oldw;
+void bpnn_adjust_weights(float *delta, int ndelta, float *ly, int nly, float **w, float **oldw)
 {
   float new_dw;
   int k, j;
@@ -316,7 +313,7 @@ float *delta, *ly, **w, **oldw;
   #pragma omp parallel for  \
       shared(oldw, w, delta) \
 	  private(j, k, new_dw) \
-	  firstprivate(ndelta, nly, momentum) 
+	  firstprivate(ndelta, nly)
 #endif 
   for (j = 1; j <= ndelta; j++) {
     for (k = 0; k <= nly; k++) {
@@ -328,8 +325,7 @@ float *delta, *ly, **w, **oldw;
 }
 
 
-void bpnn_feedforward(net)
-BPNN *net;
+void bpnn_feedforward(BPNN *net)
 {
   int in, hid, out;
 
@@ -346,9 +342,7 @@ BPNN *net;
 }
 
 
-void bpnn_train(net, eo, eh)
-BPNN *net;
-float *eo, *eh;
+void bpnn_train(BPNN *net, float *eo, float *eh)
 {
   int in, hid, out;
   float out_err, hid_err;
@@ -382,9 +376,7 @@ float *eo, *eh;
 
 
 
-void bpnn_save(net, filename)
-BPNN *net;
-char *filename;
+void bpnn_save(BPNN *net, const char *filename)
 {
   int n1, n2, n3, i, j, memcnt;
   float dvalue, **w;
@@ -447,30 +439,46 @@ char *filename;
 }
 
 
-BPNN *bpnn_read(filename)
-char *filename;
+BPNN *bpnn_read(const char *filename)
 {
   char *mem;
   BPNN *new;
   int fd, n1, n2, n3, i, j, memcnt;
 
-  if ((fd = open(filename, 0, 0644)) == -1) {
+  if ((fd = open(filename, O_RDONLY)) == -1) {
     return (NULL);
   }
 
   printf("Reading '%s'\n", filename);  //fflush(stdout);
 
-  read(fd, (char *) &n1, sizeof(int));
-  read(fd, (char *) &n2, sizeof(int));
-  read(fd, (char *) &n3, sizeof(int));
+  if (read_full(fd, (char *) &n1, sizeof(int)) != 0 ||
+      read_full(fd, (char *) &n2, sizeof(int)) != 0 ||
+      read_full(fd, (char *) &n3, sizeof(int)) != 0) {
+    close(fd);
+    return (NULL);
+  }
   new = bpnn_internal_create(n1, n2, n3);
+  if (new == NULL) {
+    close(fd);
+    return (NULL);
+  }
 
   printf("'%s' contains a %dx%dx%d network\n", filename, n1, n2, n3);
   printf("Reading input weights...");  //fflush(stdout);
 
   memcnt = 0;
   mem = (char *) malloc ((unsigned) ((n1+1) * (n2+1) * sizeof(float)));
-  read(fd, mem, (n1+1) * (n2+1) * sizeof(float));
+  if (mem == NULL) {
+    bpnn_free(new);
+    close(fd);
+    return (NULL);
+  }
+  if (read_full(fd, mem, (n1+1) * (n2+1) * sizeof(float)) != 0) {
+    free(mem);
+    bpnn_free(new);
+    close(fd);
+    return (NULL);
+  }
   for (i = 0; i <= n1; i++) {
     for (j = 0; j <= n2; j++) {
       fastcopy(&(new->input_weights[i][j]), &mem[memcnt], sizeof(float));
@@ -483,7 +491,17 @@ char *filename;
 
   memcnt = 0;
   mem = (char *) malloc ((unsigned) ((n2+1) * (n3+1) * sizeof(float)));
-  read(fd, mem, (n2+1) * (n3+1) * sizeof(float));
+  if (mem == NULL) {
+    bpnn_free(new);
+    close(fd);
+    return (NULL);
+  }
+  if (read_full(fd, mem, (n2+1) * (n3+1) * sizeof(float)) != 0) {
+    free(mem);
+    bpnn_free(new);
+    close(fd);
+    return (NULL);
+  }
   for (i = 0; i <= n2; i++) {
     for (j = 0; j <= n3; j++) {
       fastcopy(&(new->hidden_weights[i][j]), &mem[memcnt], sizeof(float));

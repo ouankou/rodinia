@@ -32,6 +32,7 @@
 */
 
 #include <stdio.h>
+#include <unistd.h>
 #include  "matrix.h"
 #include  "meminfo.h"
 #ifdef COMPLEX   
@@ -74,21 +75,36 @@ static char *mem_type_names[] = {
 static MEM_ARRAY   mem_info_sum[MEM_NUM_STD_TYPES];  
 
 
-/* for freeing various types */
-static int (*mem_free_funcs[MEM_NUM_STD_TYPES])() = {
-   m_free,
-   bd_free,
-   px_free,    
-   v_free,	
-   iv_free
+static int m_free_wrap(void *ptr) { return m_free((MAT *)ptr); }
+static int bd_free_wrap(void *ptr) { return bd_free((BAND *)ptr); }
+static int px_free_wrap(void *ptr) { return px_free((PERM *)ptr); }
+static int v_free_wrap(void *ptr) { return v_free((VEC *)ptr); }
+static int iv_free_wrap(void *ptr) { return iv_free((IVEC *)ptr); }
 #ifdef SPARSE
-     ,iter_free,	
-     sprow_free, 
-     sp_free
+static int iter_free_wrap(void *ptr) { return iter_free((ITER *)ptr); }
+static int sprow_free_wrap(void *ptr) { return sprow_free((SPROW *)ptr); }
+static int sp_free_wrap(void *ptr) { return sp_free((SPMAT *)ptr); }
 #endif
 #ifdef COMPLEX
-       ,zv_free,	
-       zm_free
+static int zv_free_wrap(void *ptr) { return zv_free((ZVEC *)ptr); }
+static int zm_free_wrap(void *ptr) { return zm_free((ZMAT *)ptr); }
+#endif
+
+/* for freeing various types */
+static int (*mem_free_funcs[MEM_NUM_STD_TYPES])(void *) = {
+   m_free_wrap,
+   bd_free_wrap,
+   px_free_wrap,
+   v_free_wrap,
+   iv_free_wrap
+#ifdef SPARSE
+     ,iter_free_wrap,
+     sprow_free_wrap,
+     sp_free_wrap
+#endif
+#ifdef COMPLEX
+       ,zv_free_wrap,
+       zm_free_wrap
 #endif
       };
 
@@ -103,18 +119,10 @@ MEM_CONNECT mem_connect[MEM_CONNECT_MAX_LISTS] = {
 
 
 /* attach a new list of types */
-#ifndef ANSI_C
-int mem_attach_list(list, ntypes, type_names, free_funcs, info_sum)
-int list,ntypes;         /* number of a list and number of types there */
-char *type_names[];      /* list of names of types */
-int (*free_funcs[])();   /* list of releasing functions */
-MEM_ARRAY info_sum[];    /* local table */
-#else
-int mem_attach_list(int list, int ntypes, 
-		    char *type_names[], 
-		    int (*free_funcs[])(void *), 
+int mem_attach_list(int list, int ntypes,
+		    char *type_names[],
+		    int (*free_funcs[])(void *),
 		    MEM_ARRAY info_sum[])
-#endif
 {
    if (list < 0 || list >= MEM_CONNECT_MAX_LISTS)
      return -1;
@@ -439,4 +447,3 @@ void mem_numvar_list(int type, int num, int list)
       }
    }
 }
-

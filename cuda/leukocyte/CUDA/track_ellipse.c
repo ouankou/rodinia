@@ -1,5 +1,25 @@
 #include "track_ellipse.h"
 #include "track_ellipse_kernel.h"
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static FILE *open_output_file(const char *filename)
+{
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return fopen(filename, "w+");
+	}
+
+	char output_path[PATH_MAX];
+	int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+	if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+		fprintf(stderr, "Output path is too long for '%s'\n", filename);
+		return NULL;
+	}
+
+	return fopen(output_path, "w+");
+}
 
 
 void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np, int Nf) {
@@ -186,7 +206,11 @@ void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np,
 		if (frame_num == Nf)
 		  {
 		    FILE * pFile;
-		    pFile = fopen ("result.txt","w+");
+		    pFile = open_output_file("result.txt");
+		    if (pFile == NULL) {
+		      fprintf(stderr, "Failed to open result output file\n");
+		      continue;
+		    }
 	
 		    for (cell_num = 0; cell_num < Nc; cell_num++)		
 		      fprintf(pFile,"\n%d,%f,%f", cell_num, xci[cell_num], yci[cell_num]);

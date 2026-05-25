@@ -15,7 +15,7 @@
 //	WRITE FUNCTION
 //========================================================================================================================
 
-void write(	char* filename,
+void write_file(	char* filename,
 					fp* input, 
 					int data_rows, 
 					int data_cols, 
@@ -74,7 +74,7 @@ void write(	char* filename,
 //	READ FUNCTION
 //========================================================================================================================
 
-void read(	char* filename,
+void read_file(	char* filename,
 					fp* input,
 					int data_rows, 
 					int data_cols,

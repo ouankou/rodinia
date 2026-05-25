@@ -45,8 +45,7 @@ static char rcsid[] = "$Id: zschur.c,v 1.4 1995/04/07 16:28:58 des Exp $";
 /* zschur -- computes the Schur decomposition of the matrix A in situ
 	-- optionally, gives Q matrix such that Q^*.A.Q is upper triangular
 	-- returns upper triangular Schur matrix */
-ZMAT	*zschur(A,Q)
-ZMAT	*A, *Q;
+ZMAT	*zschur(ZMAT *A, ZMAT *Q)
 {
     int		i, j, iter, k, k_min, k_max, k_tmp, n, split;
     Real	c;
@@ -383,4 +382,3 @@ MAT	*T, *Q, *X_re, *X_im;
 }
 
 #endif
-

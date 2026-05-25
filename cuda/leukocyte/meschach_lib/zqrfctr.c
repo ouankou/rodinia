@@ -61,9 +61,7 @@ static	char	rcsid[] = "$Id: zqrfctr.c,v 1.1 1994/01/13 04:21:22 des Exp $";
 /* zQRfactor -- forms the QR factorisation of A
 	-- factorisation stored in compact form as described above
 	(not quite standard format) */
-ZMAT	*zQRfactor(A,diag)
-ZMAT	*A;
-ZVEC	*diag;
+ZMAT	*zQRfactor(ZMAT *A, ZVEC *diag)
 {
     unsigned int	k,limit;
     Real	beta;
@@ -101,10 +99,7 @@ ZVEC	*diag;
 /* zQRCPfactor -- forms the QR factorisation of A with column pivoting
    -- factorisation stored in compact form as described above
    ( not quite standard format )				*/
-ZMAT	*zQRCPfactor(A,diag,px)
-ZMAT	*A;
-ZVEC	*diag;
-PERM	*px;
+ZMAT	*zQRCPfactor(ZMAT *A, ZVEC *diag, PERM *px)
 {
     unsigned int	i, i_max, j, k, limit;
     STATIC	ZVEC	*tmp1=ZVNULL, *tmp2=ZVNULL, *w=ZVNULL;
@@ -191,9 +186,7 @@ PERM	*px;
 /* zQsolve -- solves Qx = b, Q is an orthogonal matrix stored in compact
 	form a la QRfactor()
 	-- may be in-situ */
-ZVEC	*_zQsolve(QR,diag,b,x,tmp)
-ZMAT	*QR;
-ZVEC	*diag, *b, *x, *tmp;
+ZVEC	*_zQsolve(ZMAT *QR, ZVEC *diag, ZVEC *b, ZVEC *x, ZVEC *tmp)
 {
     unsigned int	dynamic;
     int		k, limit;
@@ -231,9 +224,7 @@ ZVEC	*diag, *b, *x, *tmp;
 
 /* zmakeQ -- constructs orthogonal matrix from Householder vectors stored in
    compact QR form */
-ZMAT	*zmakeQ(QR,diag,Qout)
-ZMAT	*QR,*Qout;
-ZVEC	*diag;
+ZMAT	*zmakeQ(ZMAT *QR, ZVEC *diag, ZMAT *Qout)
 {
     STATIC	ZVEC	*tmp1=ZVNULL,*tmp2=ZVNULL;
     unsigned int	i, limit;
@@ -284,8 +275,7 @@ ZVEC	*diag;
 
 /* zmakeR -- constructs upper triangular matrix from QR (compact form)
 	-- may be in-situ (all it does is zero the lower 1/2) */
-ZMAT	*zmakeR(QR,Rout)
-ZMAT	*QR,*Rout;
+ZMAT	*zmakeR(ZMAT *QR, ZMAT *Rout)
 {
     unsigned int	i,j;
     
@@ -302,9 +292,7 @@ ZMAT	*QR,*Rout;
 
 /* zQRsolve -- solves the system Q.R.x=b where Q & R are stored in compact form
    -- returns x, which is created if necessary */
-ZVEC	*zQRsolve(QR,diag,b,x)
-ZMAT	*QR;
-ZVEC	*diag, *b, *x;
+ZVEC	*zQRsolve(ZMAT *QR, ZVEC *diag, ZVEC *b, ZVEC *x)
 {
     int	limit;
     STATIC	ZVEC	*tmp = ZVNULL;
@@ -332,9 +320,7 @@ ZVEC	*diag, *b, *x;
 /* zQRAsolve -- solves the system (Q.R)*.x = b
 	-- Q & R are stored in compact form
 	-- returns x, which is created if necessary */
-ZVEC	*zQRAsolve(QR,diag,b,x)
-ZMAT	*QR;
-ZVEC	*diag, *b, *x;
+ZVEC	*zQRAsolve(ZMAT *QR, ZVEC *diag, ZVEC *b, ZVEC *x)
 {
     int		j, limit;
     Real	beta, r_ii, tmp_val;
@@ -375,11 +361,7 @@ ZVEC	*diag, *b, *x;
 
 /* zQRCPsolve -- solves A.x = b where A is factored by QRCPfactor()
    -- assumes that A is in the compact factored form */
-ZVEC	*zQRCPsolve(QR,diag,pivot,b,x)
-ZMAT	*QR;
-ZVEC	*diag;
-PERM	*pivot;
-ZVEC	*b, *x;
+ZVEC	*zQRCPsolve(ZMAT *QR, ZVEC *diag, PERM *pivot, ZVEC *b, ZVEC *x)
 {
     if ( ! QR || ! diag || ! pivot || ! b )
 	error(E_NULL,"zQRCPsolve");
@@ -394,9 +376,7 @@ ZVEC	*b, *x;
 
 /* zUmlt -- compute out = upper_triang(U).x
 	-- may be in situ */
-ZVEC	*zUmlt(U,x,out)
-ZMAT	*U;
-ZVEC	*x, *out;
+ZVEC	*zUmlt(ZMAT *U, ZVEC *x, ZVEC *out)
 {
     int		i, limit;
 
@@ -414,9 +394,7 @@ ZVEC	*x, *out;
 }
 
 /* zUAmlt -- returns out = upper_triang(U)^T.x */
-ZVEC	*zUAmlt(U,x,out)
-ZMAT	*U;
-ZVEC	*x, *out;
+ZVEC	*zUAmlt(ZMAT *U, ZVEC *x, ZVEC *out)
 {
     /* complex	sum; */
     complex	tmp;
@@ -447,8 +425,7 @@ ZVEC	*x, *out;
 	-- if the matrix is exactly singular, HUGE_VAL is returned
 	-- note that QRcondest() is likely to be more reliable for
 		matrices factored using QRCPfactor() */
-double	zQRcondest(QR)
-ZMAT	*QR;
+double	zQRcondest(ZMAT *QR)
 {
     STATIC	ZVEC	*y=ZVNULL;
     Real	norm, norm1, norm2, tmp1, tmp2;
@@ -545,4 +522,3 @@ ZMAT	*QR;
 
     return norm1*norm2;
 }
-

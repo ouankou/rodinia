@@ -76,10 +76,13 @@
 #include <limits.h>
 #include <math.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <omp.h>
 #include "kmeans.h"
 
 extern double wtime(void);
+extern char *optarg;
+int getopt(int argc, char * const argv[], const char *optstring);
 
 
 
@@ -160,12 +163,16 @@ int setup(int argc, char **argv) {
     //io_timing = omp_get_wtime();
     if (isBinaryFile) {		//Binary file input
         int infile;
-        if ((infile = open(filename, O_RDONLY, "0600")) == -1) {
+        if ((infile = open(filename, O_RDONLY, 0600)) == -1) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
             exit(1);
         }
-        read(infile, &npoints,   sizeof(int));
-        read(infile, &nfeatures, sizeof(int));        
+        if (read(infile, &npoints, sizeof(int)) != sizeof(int) ||
+            read(infile, &nfeatures, sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "Error: failed to read binary header (%s)\n", filename);
+            close(infile);
+            exit(1);
+        }
 
         /* allocate space for features[][] and read attributes of all objects */
         buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
@@ -174,7 +181,12 @@ int setup(int argc, char **argv) {
         for (i=1; i<npoints; i++)
             features[i] = features[i-1] + nfeatures;
 
-        read(infile, buf, npoints*nfeatures*sizeof(float));
+        if (read(infile, buf, (size_t)npoints*nfeatures*sizeof(float)) !=
+            (ssize_t)((size_t)npoints*nfeatures*sizeof(float))) {
+            fprintf(stderr, "Error: failed to read binary payload (%s)\n", filename);
+            close(infile);
+            exit(1);
+        }
 
         close(infile);
     }
@@ -302,4 +314,3 @@ int setup(int argc, char **argv) {
 	free(features);    
     return(0);
 }
-

@@ -862,18 +862,21 @@ print_leaves( node* root )
 	c = (node *) c->pointers[0];
 	while (true) {
 		for (i = 0; i < c->num_keys; i++) {
-			if (verbose_output)
-			//printf("%x ", (unsigned int)c->pointers[i]);
+			if (verbose_output) {
+				//printf("%x ", (unsigned int)c->pointers[i]);
+			}
 			printf("%d ", c->keys[i]);
 		}
-		if (verbose_output)
-		//printf("%x ", (unsigned int)c->pointers[order - 1]);
+		if (verbose_output) {
+			//printf("%x ", (unsigned int)c->pointers[order - 1]);
+		}
 		if (c->pointers[order - 1] != NULL) {
 			printf(" | ");
 			c = (node *) c->pointers[order - 1];
 		}
-		else
-		break;
+		else {
+			break;
+		}
 	}
 	printf("\n");
 }
@@ -1880,7 +1883,8 @@ main(	int argc,
 		if (written > 0 && (size_t)written < sizeof(output_path)) {
 			output = output_path;
 		} else {
-			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output);
+			fprintf(stderr, "Output path is too long for '%s'\n", output);
+			return EXIT_FAILURE;
 		}
 	}
 	FILE * pFile;
@@ -2104,7 +2108,6 @@ main(	int argc,
 
 			case 'x':
 			{
-				while (getchar() != (int)'\n');
 				root = destroy_tree(root);
 				print_tree(root);
 				break;
@@ -2116,7 +2119,6 @@ main(	int argc,
 
 			case 'l':
 			{
-				while (getchar() != (int)'\n');
 				print_leaves(root);
 				break;
 			}
@@ -2127,7 +2129,6 @@ main(	int argc,
 
 			case 't':
 			{
-				while (getchar() != (int)'\n');
 				print_tree(root);
 				break;
 			}
@@ -2138,7 +2139,6 @@ main(	int argc,
 
 			case 'v':
 			{
-				while (getchar() != (int)'\n');
 				verbose_output = !verbose_output;
 				break;
 			}
@@ -2149,7 +2149,6 @@ main(	int argc,
 
 			case 'q':
 			{
-				while (getchar() != (int)'\n');
 				return EXIT_SUCCESS;
 			}
 

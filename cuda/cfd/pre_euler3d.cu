@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
+#include <string>
 
  
  
@@ -32,15 +34,24 @@
  */
 
 
-#if block_length > 128
-#warning "the kernels may fail too launch on some systems if the block length is too large"
-#endif
-
-
 #define VAR_DENSITY 0
 #define VAR_MOMENTUM  1
 #define VAR_DENSITY_ENERGY (VAR_MOMENTUM+NDIM)
 #define NVAR (VAR_DENSITY_ENERGY+1)
+
+static std::string output_path(const char *filename)
+{
+	const char *output_dir = std::getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return std::string(filename);
+	}
+	std::string path(output_dir);
+	if (!path.empty() && path[path.size() - 1] != '/') {
+		path += "/";
+	}
+	path += filename;
+	return path;
+}
 
 
 /*
@@ -84,14 +95,14 @@ void dump(float* variables, int nel, int nelr)
 	download(h_variables, variables, nelr*NVAR);
 
 	{
-		std::ofstream file("density");
+		std::ofstream file(output_path("density").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++) file << h_variables[i + VAR_DENSITY*nelr] << std::endl;
 	}
 
 
 	{
-		std::ofstream file("momentum");
+		std::ofstream file(output_path("momentum").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++)
 		{
@@ -102,7 +113,7 @@ void dump(float* variables, int nel, int nelr)
 	}
 	
 	{
-		std::ofstream file("density_energy");
+		std::ofstream file(output_path("density_energy").c_str());
 		file << nel << " " << nelr << std::endl;
 		for(int i = 0; i < nel; i++) file << h_variables[i + VAR_DENSITY_ENERGY*nelr] << std::endl;
 	}
