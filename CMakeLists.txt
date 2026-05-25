@@ -14,6 +14,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 option(RODINIA_ENABLE_OPENMP "Build OpenMP benchmarks" ON)
+option(RODINIA_ENABLE_OMP_GPU "Build OpenMP GPU offload benchmarks" OFF)
 option(RODINIA_ENABLE_OPENCL "Build OpenCL benchmarks" ON)
 option(RODINIA_ENABLE_CUDA "Build CUDA benchmarks" ON)
 option(RODINIA_ENABLE_CUDA_BACKEND "Build CUDA benchmarks under cuda/" ON)
@@ -21,14 +22,18 @@ option(RODINIA_ENABLE_MUMMERGPU "Build mummergpu benchmarks" ON)
 
 set(RODINIA_OUTPUT_ROOT "${CMAKE_BINARY_DIR}/bin" CACHE PATH "Output root for benchmark binaries")
 set(RODINIA_CUDA_SAMPLES_INCLUDE_DIR "" CACHE PATH "Path to CUDA samples common/inc for helper_cuda.h")
+set(RODINIA_OMP_GPU_OFFLOAD_ARCH "" CACHE STRING "OpenMP GPU offload architecture passed as --offload-arch=<value>; leave empty to auto-detect NVIDIA GPUs when possible")
 
 find_package(Threads)
 
-if(RODINIA_ENABLE_OPENMP)
+if(RODINIA_ENABLE_OPENMP OR RODINIA_ENABLE_OPENCL OR RODINIA_ENABLE_OMP_GPU)
   find_package(OpenMP)
-  if(NOT OpenMP_FOUND)
+  if(RODINIA_ENABLE_OPENMP AND NOT OpenMP_FOUND)
     message(WARNING "OpenMP not found; disabling OpenMP benchmarks.")
     set(RODINIA_ENABLE_OPENMP OFF)
+  endif()
+  if(RODINIA_ENABLE_OMP_GPU AND NOT OpenMP_FOUND)
+    message(FATAL_ERROR "OpenMP not found; RODINIA_ENABLE_OMP_GPU requires an OpenMP offload-capable compiler.")
   endif()
 endif()
 
@@ -80,6 +85,10 @@ include(cmake/RodiniaHelpers.cmake)
 
 if(RODINIA_ENABLE_OPENMP)
   add_subdirectory(openmp)
+endif()
+
+if(RODINIA_ENABLE_OMP_GPU)
+  add_subdirectory(omp-gpu)
 endif()
 
 if(RODINIA_ENABLE_OPENCL)
