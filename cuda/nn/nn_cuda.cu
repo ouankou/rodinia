@@ -194,7 +194,9 @@ int loadData(char *filename,std::vector<Record> &records,std::vector<LatLong> &l
         while(!feof(fp)){
             Record record;
             LatLong latLong;
-            fgets(record.recString,49,fp);
+            if (fgets(record.recString, 49, fp) == NULL) {
+                break;
+            }
             fgetc(fp); // newline
             if (feof(fp)) break;
 

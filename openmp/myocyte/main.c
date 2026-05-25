@@ -257,7 +257,7 @@ int main(int argc, char *argv []){
 
 	// y
 	for(i=0; i<workload; i++){
-		read(	"../../data/myocyte/y.txt",
+		read_file(	"../../data/myocyte/y.txt",
 					y[i][0],
 					91,
 					1,
@@ -266,7 +266,7 @@ int main(int argc, char *argv []){
 
 	// params
 	for(i=0; i<workload; i++){
-		read(	"../../data/myocyte/params.txt",
+		read_file(	"../../data/myocyte/params.txt",
 					params[i],
 					16,
 					1,
@@ -337,7 +337,8 @@ int main(int argc, char *argv []){
 		if (written > 0 && (size_t)written < sizeof(output_full)) {
 			output_path = output_full;
 		} else {
-			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
+			fprintf(stderr, "Output path is too long for '%s'\n", output_path);
+			exit(EXIT_FAILURE);
 		}
 	}
 	pFile = fopen(output_path, "w");

@@ -19,7 +19,7 @@
 //====================================================================================================100
 //====================================================================================================100
 
-void write_graphics(	char* filename,
+void write_graphics(	const char* filename,
 									fp* input, 
 									int data_rows, 
 									int data_cols, 
@@ -88,7 +88,7 @@ void write_graphics(	char* filename,
 //====================================================================================================100
 //====================================================================================================100
 
-void read_graphics(	char* filename,
+void read_graphics(	const char* filename,
 									fp* input,
 									int data_rows, 
 									int data_cols,
@@ -132,7 +132,11 @@ void read_graphics(	char* filename,
 	if(major==0){																// if matrix is saved row major in memory (C)
 		for(i=0; i<data_rows; i++){
 			for(j=0; j<data_cols; j++){
-				fscanf(fid, "%d", &temp);
+				if (fscanf(fid, "%d", &temp) != 1) {
+					printf("The file ended before all pixels were read\n");
+					fclose(fid);
+					return;
+				}
 				input[i*data_cols+j] = (fp)temp;
 			}
 		}
@@ -140,7 +144,11 @@ void read_graphics(	char* filename,
 	else{																				// if matrix is saved column major in memory (MATLAB)
 		for(i=0; i<data_rows; i++){
 			for(j=0; j<data_cols; j++){
-				fscanf(fid, "%d", &temp);
+				if (fscanf(fid, "%d", &temp) != 1) {
+					printf("The file ended before all pixels were read\n");
+					fclose(fid);
+					return;
+				}
 				input[j*data_rows+i] = (fp)temp;
 			}
 		}

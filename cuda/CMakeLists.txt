@@ -201,9 +201,6 @@ rodinia_add_cuda_executable(cuda_huffman
   SOURCES
     huffman/main_test_cu.cu
     huffman/stats_logger.cpp
-    huffman/scan.cu
-    huffman/pack_kernels.cu
-    huffman/vlc_kernel_sm64huff.cu
     huffman/cpuencode.cpp
   INCLUDES huffman
   DEFINES ${RODINIA_CUDA_HUFFMAN_DEFINES}

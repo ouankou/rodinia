@@ -774,9 +774,7 @@ VEC    *bdLDLsolve(const BAND *A, const VEC *b, VEC *x)
  *   may not work in situ (x != out)
  */
 
-VEC *bd_mv_mlt(A, x, out)
-BAND *A;
-VEC *x, *out;
+VEC *bd_mv_mlt(BAND *A, VEC *x, VEC *out)
 {
   int i, j, j_end, k;
   int start_idx, end_idx;
@@ -814,6 +812,5 @@ VEC *x, *out;
 
   return out;
 }
-
 
 

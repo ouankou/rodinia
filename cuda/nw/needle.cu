@@ -5,6 +5,9 @@
 #include <math.h>
 #include "needle.h"
 #include <cuda.h>
+#ifdef TRACEBACK
+#include <limits.h>
+#endif
 #include <sys/time.h>
 
 // includes, kernels
@@ -13,6 +16,25 @@
 ////////////////////////////////////////////////////////////////////////////////
 // declaration, forward
 void runTest( int argc, char** argv);
+
+#ifdef TRACEBACK
+static FILE *open_output_file(const char *filename)
+{
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return fopen(filename, "w");
+	}
+
+	char output_path[PATH_MAX];
+	int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+	if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+		fprintf(stderr, "Output path is too long for '%s'\n", filename);
+		return NULL;
+	}
+
+	return fopen(output_path, "w");
+}
+#endif
 
 
 int blosum62[24][24] = {
@@ -170,62 +192,65 @@ void runTest( int argc, char** argv)
 	
 //#define TRACEBACK
 #ifdef TRACEBACK
-	
-	FILE *fpo = fopen("result.txt","w");
-	fprintf(fpo, "print traceback value GPU:\n");
-    
-	for (int i = max_rows - 2,  j = max_rows - 2; i>=0, j>=0;){
-		int nw, n, w, traceback;
-		if ( i == max_rows - 2 && j == max_rows - 2 )
-			fprintf(fpo, "%d ", output_itemsets[ i * max_cols + j]); //print the first element
-		if ( i == 0 && j == 0 )
-           break;
-		if ( i > 0 && j > 0 ){
-			nw = output_itemsets[(i - 1) * max_cols + j - 1];
-		    w  = output_itemsets[ i * max_cols + j - 1 ];
-            n  = output_itemsets[(i - 1) * max_cols + j];
-		}
-		else if ( i == 0 ){
-		    nw = n = LIMIT;
-		    w  = output_itemsets[ i * max_cols + j - 1 ];
-		}
-		else if ( j == 0 ){
-		    nw = w = LIMIT;
-            n  = output_itemsets[(i - 1) * max_cols + j];
-		}
-		else{
-		}
+	FILE *fpo = open_output_file("result.txt");
+	if (!fpo) {
+		printf("Unable to open traceback output file\n");
+	} else {
+		fprintf(fpo, "print traceback value GPU:\n");
 
-		//traceback = maximum(nw, w, n);
-		int new_nw, new_w, new_n;
-		new_nw = nw + referrence[i * max_cols + j];
-		new_w = w - penalty;
+		for (int i = max_rows - 2,  j = max_rows - 2; i >= 0 && j >= 0;){
+			int nw, n, w, traceback;
+			if ( i == max_rows - 2 && j == max_rows - 2 )
+				fprintf(fpo, "%d ", output_itemsets[ i * max_cols + j]); //print the first element
+			if ( i == 0 && j == 0 )
+			   break;
+			if ( i > 0 && j > 0 ){
+				nw = output_itemsets[(i - 1) * max_cols + j - 1];
+				w  = output_itemsets[ i * max_cols + j - 1 ];
+				n  = output_itemsets[(i - 1) * max_cols + j];
+			}
+			else if ( i == 0 ){
+				nw = n = LIMIT;
+				w  = output_itemsets[ i * max_cols + j - 1 ];
+			}
+			else if ( j == 0 ){
+				nw = w = LIMIT;
+				n  = output_itemsets[(i - 1) * max_cols + j];
+			}
+			else{
+			}
+
+			//traceback = maximum(nw, w, n);
+			int new_nw, new_w, new_n;
+			new_nw = nw + referrence[i * max_cols + j];
+			new_w = w - penalty;
 		new_n = n - penalty;
-		
-		traceback = maximum(new_nw, new_w, new_n);
-		if(traceback == new_nw)
-			traceback = nw;
-		if(traceback == new_w)
-			traceback = w;
+
+			traceback = maximum(new_nw, new_w, new_n);
+			if(traceback == new_nw)
+				traceback = nw;
+			if(traceback == new_w)
+				traceback = w;
 		if(traceback == new_n)
             traceback = n;
-			
-		fprintf(fpo, "%d ", traceback);
 
-		if(traceback == nw )
-		{i--; j--; continue;}
+			fprintf(fpo, "%d ", traceback);
 
-        else if(traceback == w )
-		{j--; continue;}
+			if(traceback == nw )
+			{i--; j--; continue;}
 
-        else if(traceback == n )
-		{i--; continue;}
+			else if(traceback == w )
+			{j--; continue;}
 
-		else
-		;
+			else if(traceback == n )
+			{i--; continue;}
+
+			else
+			;
+		}
+
+		fclose(fpo);
 	}
-	
-	fclose(fpo);
 
 #endif
 

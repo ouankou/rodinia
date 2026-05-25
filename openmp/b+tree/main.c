@@ -737,10 +737,10 @@ transform_to_cuda(	node * root,
 		for(i = 0; i < size; i++)
 			printf("%d ", krecords[i].value);
 		printf("\nNumber of records = %ld, sizeof(record)=%zu, total=%zu\n",
-			size, sizeof(record), (size_t)size * sizeof(record));
+			(long)size, sizeof(record), (size_t)size * sizeof(record));
 		printf("Number of knodes = %ld, sizeof(knode)=%zu, total=%zu\n",
-			nodeindex, sizeof(knode), (size_t)nodeindex * sizeof(knode));
-		printf("\nDone Transformation. Mem used: %ld\n", mem_used);
+			(long)nodeindex, sizeof(knode), (size_t)nodeindex * sizeof(knode));
+		printf("\nDone Transformation. Mem used: %ld\n", (long)mem_used);
 	}
 	gettimeofday (&two, NULL);
 	double oneD = one.tv_sec + (double)one.tv_usec * .000001;
@@ -1863,7 +1863,8 @@ main(	int argc,
 		if (written > 0 && (size_t)written < sizeof(output_path)) {
 			output = output_path;
 		} else {
-			fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output);
+			fprintf(stderr, "Output path is too long for '%s'\n", output);
+			return EXIT_FAILURE;
 		}
 	}
 	FILE * pFile;
@@ -2113,7 +2114,6 @@ main(	int argc,
 
 			case 'x':
 			{
-				while (getchar() != (int)'\n');
 				root = destroy_tree(root);
 				print_tree(root);
 				break;
@@ -2125,7 +2125,6 @@ main(	int argc,
 
 			case 'l':
 			{
-				while (getchar() != (int)'\n');
 				print_leaves(root);
 				break;
 			}
@@ -2136,7 +2135,6 @@ main(	int argc,
 
 			case 't':
 			{
-				while (getchar() != (int)'\n');
 				print_tree(root);
 				break;
 			}
@@ -2147,7 +2145,6 @@ main(	int argc,
 
 			case 'v':
 			{
-				while (getchar() != (int)'\n');
 				verbose_output = !verbose_output;
 				break;
 			}
@@ -2158,7 +2155,6 @@ main(	int argc,
 
 			case 'q':
 			{
-				while (getchar() != (int)'\n');
 				return EXIT_SUCCESS;
 			}
 

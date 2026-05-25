@@ -191,7 +191,6 @@ void compute_step_factor(int nelr, float* __restrict variables, float* areas, fl
         {
             int b_start = blk*block_length;
             int b_end = (blk+1)*block_length > nelr ? nelr : (blk+1)*block_length;
-#pragma omp simd
 	for(int i = b_start; i < b_end; i++)
 	{
 		float density = variables[i + VAR_DENSITY*nelr];
@@ -228,7 +227,6 @@ void compute_flux(int nelr, int* elements_surrounding_elements, float* normals, 
         {
             int b_start = blk*block_length;
             int b_end = (blk+1)*block_length > nelr ? nelr : (blk+1)*block_length;
-#pragma omp simd
 	for(int i = b_start; i < b_end; ++i)
 	{
                 float density_i = variables[i + VAR_DENSITY*nelr];

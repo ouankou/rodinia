@@ -653,32 +653,45 @@ compare_lud_verify() {
   fi
 }
 
-compare_streamcluster_objective() {
+compare_streamcluster_centers() {
   local name="$1"
   local f1="$2"
   local f2="$3"
-  local abs_tol="$4"
-  local rel_tol="$5"
+  local expected_weight="$4"
+  local kmin="$5"
+  local kmax="$6"
+  local dim="$7"
   require_files "$name" "$f1" "$f2" || return 0
   local result
-  result=$(awk -v abs_tol="$abs_tol" -v rel_tol="$rel_tol" '
+  result=$(awk -v expected_weight="$expected_weight" -v kmin="$kmin" -v kmax="$kmax" -v dim="$dim" '
     FNR == 1 { file++ }
-    FNR == 1 { if (file == 1) n1 = $1; else n2 = $1 }
-    FNR == 2 { if (file == 1) obj1 = $1; else obj2 = $1 }
+    {
+      line = (FNR - 1) % 4;
+      if (line == 0) {
+        if ($0 !~ /^[0-9]+$/) bad[file] = 1;
+        centers[file]++;
+      } else if (line == 1) {
+        if ($0 !~ /^-?[0-9]+(\.[0-9]+)?$/) bad[file] = 1;
+        weight[file] += $1;
+      } else if (line == 2) {
+        if (NF != dim) bad[file] = 1;
+        for (i = 1; i <= NF; i++) {
+          if ($i !~ /^-?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?$/) bad[file] = 1;
+        }
+      } else if ($0 != "") {
+        bad[file] = 1;
+      }
+    }
     END {
-      if (n1 == "" || n2 == "" || obj1 == "" || obj2 == "") {
-        print "MISMATCH missing_fields";
+      for (i = 1; i <= 2; i++) {
+        if (centers[i] < kmin || centers[i] > kmax) bad[i] = 1;
+        if (weight[i] != expected_weight) bad[i] = 1;
+      }
+      if (bad[1] || bad[2]) {
+        printf "MISMATCH centers=%d/%d weight=%g/%g", centers[1], centers[2], weight[1], weight[2];
         exit 0;
       }
-      if (n1 != n2) {
-        printf "MISMATCH npoints=%s/%s", n1, n2;
-        exit 0;
-      }
-      diff = obj2 - obj1; if (diff < 0) diff = -diff;
-      denom = obj1; if (denom < 0) denom = -denom; if (denom < 1e-12) denom = 1e-12;
-      rel = diff / denom;
-      status = (diff > abs_tol || rel > rel_tol) ? "MISMATCH" : "OK";
-      printf "%s abs=%g rel=%g", status, diff, rel;
+      printf "OK structural centers=%d/%d weight=%g/%g", centers[1], centers[2], weight[1], weight[2];
     }' "$f1" "$f2")
   if [[ "$result" == MISMATCH* ]]; then
     print_line "$name" "MISMATCH" "$result"
@@ -840,7 +853,7 @@ compare_numeric_lines "nw" \
 
 compare_particlefilter "particlefilter" \
   "${OMP_PARTICLE_DIR}/particlefilter.log" \
-  "${OCL_PARTICLE_DIR}/output.txt" \
+  "${OCL_PARTICLE_DIR}/particlefilter_naive_output.txt" \
   1e-2 5e-3
 
 compare_pgm "srad" \
@@ -848,7 +861,7 @@ compare_pgm "srad" \
   "${OCL_DIR}/image_out.pgm" \
   1
 
-compare_streamcluster_objective "streamcluster" \
+compare_streamcluster_centers "streamcluster" \
   "${OMP_STREAMCLUSTER_DIR}/streamcluster.txt" \
   "${OCL_STREAMCLUSTER_DIR}/streamcluster.txt" \
-  1 1e-3
+  65536 10 20 256

@@ -45,6 +45,10 @@
 #endif
 
 /* rmse.c */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 float   euclid_dist_2        (float*, float*, int);
 int     find_nearest_point   (float* , int, float**, int);
 float	rms_err(float**, int, int, float**, int);
@@ -54,5 +58,16 @@ int     cluster(int, int, float**, int, int, float, int*, float***, float*, int,
 
 /* kmeans_clustering.c */
 float **kmeans_clustering(float**, int, int, int, float, int*);
+
+/* kmeans_cuda.cu */
+void allocateMemory(int npoints, int nfeatures, int nclusters, float **features);
+void deallocateMemory(void);
+int kmeansCuda(float **feature, int nfeatures, int npoints, int nclusters,
+               int *membership, float **clusters, int *new_centers_len,
+               float **new_centers);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

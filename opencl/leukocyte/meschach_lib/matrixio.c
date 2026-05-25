@@ -28,8 +28,8 @@
 
 
 #include        <stdio.h>
-#include <unistd.h>
 #include        <ctype.h>
+#include        <unistd.h>
 #include        "matrix.h"
 
 static char rcsid[] = "$Id: matrixio.c,v 1.4 1994/01/13 05:31:10 des Exp $";
@@ -87,7 +87,8 @@ MAT     *a;
 MAT	*m_finput(FILE *fp, MAT *a)
 #endif
 {
-     MAT        *im_finput(),*bm_finput();
+     MAT        *im_finput(FILE *fp, MAT *mat);
+     MAT        *bm_finput(FILE *fp, MAT *mat);
      
      if ( isatty(fileno(fp)) )
 	  return im_finput(fp,a);
@@ -148,8 +149,8 @@ MAT     *im_finput(FILE *fp,MAT *mat)
 	       } while ( *line=='\0' || sscanf(line,"%f",&mat->me[i][j])<1 );
 #endif
 	  fprintf(stderr,"Continue: ");
-	  if (fscanf(fp,"%c",&c) != 1)
-	       error(E_INPUT,"im_finput");
+	  if (fscanf(fp, "%c", &c) != 1)
+	       error(E_INPUT, "im_finput");
 	  if ( c == 'n' || c == 'N' )
 	  {    dynamic = FALSE;                 goto redo;      }
 	  if ( (c == 'b' || c == 'B') /* && i > 0 */ )
@@ -215,7 +216,8 @@ PERM    *px;
 PERM    *px_finput(FILE *fp,PERM *px)
 #endif
 {
-     PERM       *ipx_finput(),*bpx_finput();
+     PERM       *ipx_finput(FILE *fp, PERM *px);
+     PERM       *bpx_finput(FILE *fp, PERM *px);
      
      if ( isatty(fileno(fp)) )
 	  return ipx_finput(fp,px);
@@ -341,7 +343,8 @@ VEC     *x;
 VEC     *v_finput(FILE *fp,VEC *x)
 #endif
 {
-     VEC        *ifin_vec(),*bfin_vec();
+     VEC        *ifin_vec(FILE *fp, VEC *vec);
+     VEC        *bfin_vec(FILE *fp, VEC *vec);
      
      if ( isatty(fileno(fp)) )
 	  return ifin_vec(fp,x);
@@ -658,7 +661,8 @@ IVEC	*x;
 IVEC	*iv_finput(FILE *fp, IVEC *x)
 #endif
 {
-   IVEC	*iiv_finput(),*biv_finput();
+   IVEC	*iiv_finput(FILE *fp, IVEC *iv);
+   IVEC	*biv_finput(FILE *fp, IVEC *iv);
    
    if ( isatty(fileno(fp)) )
      return iiv_finput(fp,x);
@@ -771,4 +775,3 @@ void	iv_dump(FILE *fp, const IVEC *iv)
    if ( i % 8 )
      fprintf(fp,"\n");
 }	
-

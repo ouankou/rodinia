@@ -59,9 +59,10 @@
 
 #include <stdio.h>									// (in directory known to compiler)			needed by printf, stderr
 #include <limits.h>									// (in directory known to compiler)			needed by INT_MIN, INT_MAX
-// #include <sys/time.h>							// (in directory known to compiler)			needed by ???
+#include <sys/time.h>								// (in directory known to compiler)			needed by gettimeofday
 #include <math.h>									// (in directory known to compiler)			needed by log, pow
 #include <string.h>									// (in directory known to compiler)			needed by memset
+#include <cuda_runtime_api.h>
 
 //======================================================================================================================================================150
 //	COMMON
@@ -734,9 +735,9 @@ transform_to_cuda(	node * root,
 	if(verbose){
 		for(i = 0; i < size; i++)
 			printf("%d ", krecords[i].value);
-		printf("\nNumber of records = %d, sizeof(record)=%d, total=%d\n",size,sizeof(record),size*sizeof(record));
-		printf("Number of knodes = %d, sizeof(knode)=%d, total=%d\n",nodeindex,sizeof(knode),(nodeindex)*sizeof(knode));
-		printf("\nDone Transformation. Mem used: %d\n", mem_used);
+		printf("\nNumber of records = %ld, sizeof(record)=%zu, total=%zu\n", (long)size, sizeof(record), (size_t)size*sizeof(record));
+		printf("Number of knodes = %ld, sizeof(knode)=%zu, total=%zu\n", (long)nodeindex, sizeof(knode), (size_t)nodeindex*sizeof(knode));
+		printf("\nDone Transformation. Mem used: %ld\n", (long)mem_used);
 	}
 	gettimeofday (&two, NULL);
 	double oneD = one.tv_sec + (double)one.tv_usec * .000001;
@@ -859,18 +860,21 @@ print_leaves( node* root )
 	c = (node *) c->pointers[0];
 	while (true) {
 		for (i = 0; i < c->num_keys; i++) {
-			if (verbose_output)
-			//printf("%x ", (unsigned int)c->pointers[i]);
+			if (verbose_output) {
+				//printf("%x ", (unsigned int)c->pointers[i]);
+			}
 			printf("%d ", c->keys[i]);
 		}
-		if (verbose_output)
-		//printf("%x ", (unsigned int)c->pointers[order - 1]);
+		if (verbose_output) {
+			//printf("%x ", (unsigned int)c->pointers[order - 1]);
+		}
 		if (c->pointers[order - 1] != NULL) {
 			printf(" | ");
 			c = (node *) c->pointers[order - 1];
 		}
-		else
-		break;
+		else {
+			break;
+		}
 	}
 	printf("\n");
 }
@@ -927,10 +931,10 @@ print_tree( node* root )
 			}
 		}
 		if (verbose_output) 
-		printf("(%x)", n);
+		printf("(%p)", (void *)n);
 		for (i = 0; i < n->num_keys; i++) {
 			if (verbose_output)
-			printf("%x ", n->pointers[i]);
+			printf("%p ", n->pointers[i]);
 			printf("%d ", n->keys[i]);
 		}
 		if (!n->is_leaf)
@@ -938,9 +942,9 @@ print_tree( node* root )
 		enqueue((node *) n->pointers[i]);
 		if (verbose_output) {
 			if (n->is_leaf) 
-			printf("%x ", n->pointers[order - 1]);
+			printf("%p ", n->pointers[order - 1]);
 			else
-			printf("%x ", n->pointers[n->num_keys]);
+			printf("%p ", n->pointers[n->num_keys]);
 		}
 		printf("| ");
 	}
@@ -1878,7 +1882,17 @@ main(	int argc,
 	cores_arg = 1;
 	char *input_file = NULL;
 	char *command_file = NULL;
-	char *output="output.txt";
+	const char *output = "output.txt";
+	char output_path[PATH_MAX];
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, output);
+		if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+			fprintf(stderr, "Output path is too long for '%s'\n", output);
+			return -1;
+		}
+		output = output_path;
+	}
 	FILE * pFile;
 
 
@@ -1929,17 +1943,32 @@ main(	int argc,
      if (commandFile==NULL) {fputs ("Command File error",stderr); exit (1);}
      
      // obtain file size:
-     fseek (commandFile , 0 , SEEK_END);
+     if (fseek (commandFile , 0 , SEEK_END) != 0) {
+       perror("fseek");
+       fclose(commandFile);
+       exit(1);
+     }
      lSize = ftell (commandFile);
-     rewind (commandFile);
+     if (lSize < 0) {
+       perror("ftell");
+       fclose(commandFile);
+       exit(1);
+     }
+     if (fseek (commandFile , 0 , SEEK_SET) != 0) {
+       perror("fseek");
+       fclose(commandFile);
+       exit(1);
+     }
 
-     // allocate memory to contain the whole file:
-     commandBuffer = (char*) malloc (sizeof(char)*lSize);
+     // allocate memory to contain the whole file plus terminator:
+     size_t commandSize = (size_t)lSize;
+     commandBuffer = (char*) malloc (sizeof(char) * (commandSize + 1));
      if (commandBuffer == NULL) {fputs ("Command Buffer memory error",stderr); exit (2);}
      
      // copy the file into the buffer:
-     result = fread (commandBuffer,1,lSize,commandFile);
-     if (result != lSize) {fputs ("Command file reading error",stderr); exit (3);}
+     result = fread (commandBuffer, 1, commandSize, commandFile);
+     if (result != commandSize) {fputs ("Command file reading error",stderr); exit (3);}
+     commandBuffer[commandSize] = '\0';
 
      /* the whole file is now loaded in the memory buffer. */
 
@@ -1955,7 +1984,7 @@ main(	int argc,
 
      pFile = fopen (output,"w+");
      if (pFile==NULL) 
-       fputs ("Fail to open %s !\n",output);
+       fprintf(stderr, "Fail to open %s !\n", output);
      fprintf(pFile,"******starting******\n");
      fclose(pFile);
 
@@ -1991,13 +2020,18 @@ main(	int argc,
 		}
 
 		// get # of numbers in the file
-		fscanf(file_pointer, "%d\n", &input);
+		if (fscanf(file_pointer, "%d\n", &input) != 1) {
+			fprintf(stderr, "Failure to read input count from %s\n", input_file);
+			fclose(file_pointer);
+			exit(EXIT_FAILURE);
+		}
 		size = input;
 
 		// save all numbers
 		while (!feof(file_pointer)) {
-			fscanf(file_pointer, "%d\n", &input);
-			root = insert(root, input, input);
+			if (fscanf(file_pointer, "%d\n", &input) == 1) {
+				root = insert(root, input, input);
+			}
 		}
 
 		// close file
@@ -2036,7 +2070,10 @@ main(	int argc,
 
 			case 'i':
 			{
-				scanf("%d", &input);
+				if (scanf("%d", &input) != 1) {
+					fprintf(stderr, "Failed to read insert key\n");
+					break;
+				}
 				while (getchar() != (int)'\n');
 				root = insert(root, input, input);
 				print_tree(root);
@@ -2057,7 +2094,10 @@ main(	int argc,
 
 			case 'p':
 			{
-				scanf("%d", &input);
+				if (scanf("%d", &input) != 1) {
+					fprintf(stderr, "Failed to read search key\n");
+					break;
+				}
 				while (getchar() != (int)'\n');
 				r = find(root, input, instruction == 'p');
 				if (r == NULL)
@@ -2073,7 +2113,10 @@ main(	int argc,
 
 			case 'd':
 			{
-				scanf("%d", &input);
+				if (scanf("%d", &input) != 1) {
+					fprintf(stderr, "Failed to read delete key\n");
+					break;
+				}
 				while (getchar() != (int)'\n');
 				root = (node *) deleteVal(root, input);
 				print_tree(root);
@@ -2086,7 +2129,6 @@ main(	int argc,
 
 			case 'x':
 			{
-				while (getchar() != (int)'\n');
 				root = destroy_tree(root);
 				print_tree(root);
 				break;
@@ -2098,7 +2140,6 @@ main(	int argc,
 
 			case 'l':
 			{
-				while (getchar() != (int)'\n');
 				print_leaves(root);
 				break;
 			}
@@ -2109,7 +2150,6 @@ main(	int argc,
 
 			case 't':
 			{
-				while (getchar() != (int)'\n');
 				print_tree(root);
 				break;
 			}
@@ -2120,7 +2160,6 @@ main(	int argc,
 
 			case 'v':
 			{
-				while (getchar() != (int)'\n');
 				verbose_output = !verbose_output;
 				break;
 			}
@@ -2131,7 +2170,6 @@ main(	int argc,
 
 			case 'q':
 			{
-				while (getchar() != (int)'\n');
 				return EXIT_SUCCESS;
 			}
 
@@ -2145,7 +2183,7 @@ main(	int argc,
 				// get # of queries from user
 				int count;
 				sscanf(commandPointer, "%d", &count);
-				while(*commandPointer!=32 && commandPointer!='\n')
+				while(*commandPointer!=' ' && *commandPointer!='\n' && *commandPointer!='\0')
 				  commandPointer++;
 
 				printf("\n ******command: k count=%d \n",count);
@@ -2221,7 +2259,7 @@ main(	int argc,
 				pFile = fopen (output,"aw+");
 				if (pFile==NULL)
 				  {
-				    fputs ("Fail to open %s !\n",output);
+				    fprintf(stderr, "Fail to open %s !\n", output);
 				  }
 				
 				fprintf(pFile,"\n ******command: k count=%d \n",count);
@@ -2249,8 +2287,10 @@ main(	int argc,
 			case 'r':
 			{
 				int start, end;
-				scanf("%d", &start);
-				scanf("%d", &end);
+				if (scanf("%d", &start) != 1 || scanf("%d", &end) != 1) {
+					fprintf(stderr, "Failed to read range\n");
+					break;
+				}
 				if(start > end){
 					input = start;
 					start = end;
@@ -2275,12 +2315,12 @@ main(	int argc,
 				// get # of queries from user
 				int count;
 				sscanf(commandPointer, "%d", &count);
-				while(*commandPointer!=32 && commandPointer!='\n')
+				while(*commandPointer!=' ' && *commandPointer!='\n' && *commandPointer!='\0')
 				  commandPointer++;
 
 				int rSize;
 				sscanf(commandPointer, "%d", &rSize);
-				while(*commandPointer!=32 && commandPointer!='\n')
+				while(*commandPointer!=' ' && *commandPointer!='\n' && *commandPointer!='\0')
 				  commandPointer++;
 
 				printf("\n******command: j count=%d, rSize=%d \n",count, rSize);
@@ -2368,7 +2408,7 @@ main(	int argc,
 				pFile = fopen (output,"aw+");
 				if (pFile==NULL)
 				  {
-				    fputs ("Fail to open %s !\n",output);
+				    fprintf(stderr, "Fail to open %s !\n", output);
 				  }
 
 				fprintf(pFile,"\n******command: j count=%d, rSize=%d \n",count, rSize);				

@@ -22,6 +22,8 @@
 //====================================================================================================100
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <limits.h>
 #include <math.h>
 #include <string.h>
 #include <cuda.h>
@@ -38,6 +40,21 @@
 #include "timer.c"
 
 #include "device.c"				// (in library path specified to compiler)	needed by for device functions
+
+static const char *output_path(const char *filename, char *buffer, size_t size)
+{
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return filename;
+	}
+
+	int written = snprintf(buffer, size, "%s/%s", output_dir, filename);
+	if (written <= 0 || (size_t)written >= size) {
+		fprintf(stderr, "Output path is too long for '%s'\n", filename);
+		exit(EXIT_FAILURE);
+	}
+	return buffer;
+}
 
 //====================================================================================================100
 //	MAIN FUNCTION
@@ -106,7 +123,6 @@ int main(int argc, char *argv []){
 	int blocks_x;
 	dim3 blocks;
 	dim3 blocks2;
-	dim3 blocks3;
 
 	// memory sizes
 	int mem_size;															// matrix memory size
@@ -436,7 +452,8 @@ int main(int argc, char *argv []){
 	// 	WRITE IMAGE AFTER PROCESSING
 	//================================================================================80
 
-	write_graphics(	"image_out.pgm",
+	char output_file[PATH_MAX];
+	write_graphics(	output_path("image_out.pgm", output_file, sizeof(output_file)),
 					image,
 					Nr,
 					Nc,

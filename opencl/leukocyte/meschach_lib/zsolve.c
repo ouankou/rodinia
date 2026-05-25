@@ -42,10 +42,7 @@ static	char	rcsid[] = "$Id: zsolve.c,v 1.1 1994/01/13 04:20:33 des Exp $";
 
 /* zUsolve -- back substitution with optional over-riding diagonal
 		-- can be in-situ but doesn't need to be */
-ZVEC	*zUsolve(matrix,b,out,diag)
-ZMAT	*matrix;
-ZVEC	*b, *out;
-double	diag;
+ZVEC	*zUsolve(ZMAT *matrix, ZVEC *b, ZVEC *out, double diag)
 {
     unsigned int	dim /* , j */;
     int	i, i_lim;
@@ -98,10 +95,7 @@ double	diag;
 }
 
 /* zLsolve -- forward elimination with (optional) default diagonal value */
-ZVEC	*zLsolve(matrix,b,out,diag)
-ZMAT	*matrix;
-ZVEC	*b,*out;
-double	diag;
+ZVEC	*zLsolve(ZMAT *matrix, ZVEC *b, ZVEC *out, double diag)
 {
     unsigned int	dim, i, i_lim /* , j */;
     complex	**mat_ent, *mat_row, *b_ent, *out_ent, *out_col, sum;
@@ -153,10 +147,7 @@ double	diag;
 
 /* zUAsolve -- forward elimination with (optional) default diagonal value
 		using UPPER triangular part of matrix */
-ZVEC	*zUAsolve(U,b,out,diag)
-ZMAT	*U;
-ZVEC	*b,*out;
-double	diag;
+ZVEC	*zUAsolve(ZMAT *U, ZVEC *b, ZVEC *out, double diag)
 {
     unsigned int	dim, i, i_lim /* , j */;
     complex	**U_me, *b_ve, *out_ve, tmp;
@@ -214,9 +205,7 @@ double	diag;
 }
 
 /* zDsolve -- solves Dx=b where D is the diagonal of A -- may be in-situ */
-ZVEC	*zDsolve(A,b,x)
-ZMAT	*A;
-ZVEC	*b,*x;
+ZVEC	*zDsolve(ZMAT *A, ZVEC *b, ZVEC *x)
 {
     unsigned int	dim, i;
     
@@ -240,10 +229,7 @@ ZVEC	*b,*x;
 /* zLAsolve -- back substitution with optional over-riding diagonal
 		using the LOWER triangular part of matrix
 		-- can be in-situ but doesn't need to be */
-ZVEC	*zLAsolve(L,b,out,diag)
-ZMAT	*L;
-ZVEC	*b, *out;
-double	diag;
+ZVEC	*zLAsolve(ZMAT *L, ZVEC *b, ZVEC *out, double diag)
 {
     unsigned int	dim;
     int		i, i_lim;

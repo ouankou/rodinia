@@ -247,7 +247,7 @@ int mem_stat_free_list(int mark, int list)
 #endif
 {
    unsigned int i,j;
-   int	 (*free_fn)();
+   int	 (*free_fn)(void *);
 
    if ( list < 0 || list >= MEM_CONNECT_MAX_LISTS 
        || mem_connect[list].free_funcs == NULL )
@@ -377,7 +377,7 @@ int mem_stat_reg_vars(int list,int type,char *fname,int line, ...)
    
    /* va_start(ap, type); */
    va_start(ap,line);	/* Changed for Linux 7th Oct, 2003 */
-   while (par = va_arg(ap,void **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,void **))) {   /* NULL ends the list*/
       mem_stat_reg_list(par,type,list,fname,line);
       i++;
    } 
@@ -409,7 +409,7 @@ int mem_stat_reg_vars(va_alist) va_dcl
    va_start(ap);
    list = va_arg(ap,int);
    type = va_arg(ap,int);
-   while (par = va_arg(ap,void **)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,void **))) {   /* NULL ends the list*/
       mem_stat_reg_list(par,type,list);
       i++;
    } 

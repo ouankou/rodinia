@@ -69,7 +69,6 @@ int runHisto(char* file, unsigned int* freq, unsigned int memSize, unsigned int 
     if(!prop.deviceOverlap)
     {
         cout << "No overlaps, so no speedup from streams" << endl;
-        return 0;
     }
 
     // allocate memory on the GPU for the file's data

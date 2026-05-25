@@ -66,8 +66,13 @@ void
 create_matrix(float *m, int size){
   int i,j;
   float lamda = -0.01;
-  float coe[2*size-1];
+  float *coe = (float *)malloc(((size_t)2 * (size_t)size - 1) * sizeof(float));
   float coe_i =0.0;
+
+  if (coe == NULL) {
+      fprintf(stderr, "Unable to allocate matrix coefficients\n");
+      exit(EXIT_FAILURE);
+  }
 
   for (i=0; i < size; i++)
     {
@@ -85,6 +90,7 @@ create_matrix(float *m, int size){
       }
   }
 
+  free(coe);
 
 }
 
@@ -250,7 +256,11 @@ void InitProblemOnce(char *filename)
 	
 	fp = fopen(filename, "r");
 	
-	fscanf(fp, "%d", &Size);	
+	if (fscanf(fp, "%d", &Size) != 1) {
+		fprintf(stderr, "Error reading matrix size from %s\n", filename);
+		fclose(fp);
+		exit(EXIT_FAILURE);
+	}
 	 
 	a = (float *) malloc(Size * Size * sizeof(float));
 	 
@@ -409,7 +419,11 @@ void InitMat(float *ary, int nrow, int ncol)
 	
 	for (i=0; i<nrow; i++) {
 		for (j=0; j<ncol; j++) {
-			fscanf(fp, "%f",  ary+Size*i+j);
+			if (fscanf(fp, "%f",  ary+Size*i+j) != 1) {
+				fprintf(stderr, "Error reading matrix value\n");
+				fclose(fp);
+				exit(EXIT_FAILURE);
+			}
 		}
 	}  
 }
@@ -441,7 +455,11 @@ void InitAry(float *ary, int ary_size)
 	int i;
 	
 	for (i=0; i<ary_size; i++) {
-		fscanf(fp, "%f",  &ary[i]);
+		if (fscanf(fp, "%f",  &ary[i]) != 1) {
+			fprintf(stderr, "Error reading array value\n");
+			fclose(fp);
+			exit(EXIT_FAILURE);
+		}
 	}
 }  
 
@@ -467,4 +485,3 @@ void checkCUDAError(const char *msg)
         exit(EXIT_FAILURE);
     }                         
 }
-

@@ -30,7 +30,9 @@
 */
 
 #include        <stdio.h>
-#include <unistd.h>
+#include        <stdlib.h>
+#include        <limits.h>
+#include        <unistd.h>
 #include        "sparse.h"
 
 static char rcsid[] = "$Id: sparseio.c,v 1.4 1994/01/13 05:34:25 des Exp $";
@@ -244,10 +246,18 @@ SPMAT  *sp_finput(FILE *fp)
 		       -- using amortized doubling */
 		      if ( len >= scratch_len )
 			{
-			  scratch = RENEW(scratch,2*scratch_len,row_elt);
-			  if ( ! scratch )
-			    error(E_MEM,"sp_finput");
-			  scratch_len = 2*scratch_len;
+				  {
+				    if ( scratch_len > INT_MAX / 2 )
+				      error(E_MEM,"sp_finput");
+				    size_t new_scratch_len = (size_t)2 * (size_t)scratch_len;
+					    row_elt *new_scratch = scratch
+					      ? (row_elt *)realloc(scratch, new_scratch_len * sizeof(row_elt))
+					      : (row_elt *)calloc(new_scratch_len, sizeof(row_elt));
+				    if ( ! new_scratch )
+				      error(E_MEM,"sp_finput");
+				    scratch = new_scratch;
+				    scratch_len = (int)new_scratch_len;
+				  }
 			}
 			do {  /* get an entry... */
 			    fprintf(stderr,"Entry %d: ",len);
@@ -294,8 +304,14 @@ SPMAT  *sp_finput(FILE *fp)
 	{
 	        ret_val = 0;
 		skipjunk(fp);
-		if (fscanf(fp,"SparseMatrix:") == EOF)
-		    error(E_EOF,"sp_finput");
+		{
+			char tag[32];
+			if ( (ret_val=fscanf(fp,"%31s",tag)) != 1 )
+				error((ret_val == EOF) ? E_EOF : E_FORMAT,
+				      "sp_finput");
+			if ( strcmp(tag,"SparseMatrix:") != 0 )
+				error(E_FORMAT,"sp_finput");
+		}
 		skipjunk(fp);
 		if ( (ret_val=fscanf(fp,"%u by %u",&m,&n)) != 2 )
 		    error((ret_val == EOF) ? E_EOF : E_FORMAT,"sp_finput");
@@ -323,10 +339,18 @@ SPMAT  *sp_finput(FILE *fp)
 		       -- using amortized doubling */
 		      if ( len >= scratch_len )
 			{
-			  scratch = RENEW(scratch,2*scratch_len,row_elt);
-			  if ( ! scratch )
-			    error(E_MEM,"sp_finput");
-			  scratch_len = 2*scratch_len;
+			  {
+			    if ( scratch_len > INT_MAX / 2 )
+			      error(E_MEM,"sp_finput");
+			    size_t new_scratch_len = (size_t)2 * (size_t)scratch_len;
+			    row_elt *new_scratch = scratch
+			      ? (row_elt *)realloc(scratch, new_scratch_len * sizeof(row_elt))
+			      : (row_elt *)calloc(new_scratch_len, sizeof(row_elt));
+			    if ( ! new_scratch )
+			      error(E_MEM,"sp_finput");
+			    scratch = new_scratch;
+			    scratch_len = (int)new_scratch_len;
+			  }
 			}
 #if REAL == DOUBLE
 			if ( (ret_val=fscanf(fp,"%u : %lf",&col,&val)) != 2 )
@@ -360,4 +384,3 @@ SPMAT  *sp_finput(FILE *fp)
 
 	return A;
 }
-

@@ -31,6 +31,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <error.h>
+#include <string>
 #include "dwt_cuda/dwt.h"
 #include "dwt_cuda/common.h"
 #include "dwt.h"
@@ -204,15 +205,13 @@ int writeLinear(T *component_cuda, int pixWidth, int pixHeight,
     samplesToChar(result, gpu_output, samplesNum);
 
     /* Write component */
-    char outfile[strlen(filename)+strlen(suffix)];
-    strcpy(outfile, filename);
-    strcpy(outfile+strlen(filename), suffix);
-    i = open(outfile, O_CREAT|O_WRONLY, 0644);
+    std::string outfile = std::string(filename) + suffix;
+    i = open(outfile.c_str(), O_CREAT|O_WRONLY, 0644);
     if (i == -1) {
-        error(0,errno,"cannot access %s", outfile);
+        error(0,errno,"cannot access %s", outfile.c_str());
         return -1;
     }
-    printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
+    printf("\nWriting to %s (%d x %d)\n", outfile.c_str(), pixWidth, pixHeight);
     ssize_t x ;
     x = write(i, result, samplesNum);
     close(i);
@@ -334,15 +333,13 @@ int writeNStage2DDWT(T *component_cuda, int pixWidth, int pixHeight,
     /* Write component */
     samplesToChar(result, dst, samplesNum);
 
-    char outfile[strlen(filename)+strlen(suffix)];
-    strcpy(outfile, filename);
-    strcpy(outfile+strlen(filename), suffix);
-    i = open(outfile, O_CREAT|O_WRONLY, 0644);
+    std::string outfile = std::string(filename) + suffix;
+    i = open(outfile.c_str(), O_CREAT|O_WRONLY, 0644);
     if (i == -1) {
-        error(0,errno,"cannot access %s", outfile);
+        error(0,errno,"cannot access %s", outfile.c_str());
         return -1;
     }
-    printf("\nWriting to %s (%d x %d)\n", outfile, pixWidth, pixHeight);
+    printf("\nWriting to %s (%d x %d)\n", outfile.c_str(), pixWidth, pixHeight);
     ssize_t x;
     x = write(i, result, samplesNum);
     close(i);

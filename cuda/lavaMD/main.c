@@ -20,6 +20,9 @@
 #include <stdio.h>					// (in path known to compiler)			needed by printf
 #include <stdlib.h>					// (in path known to compiler)			needed by malloc
 #include <stdbool.h>				// (in path known to compiler)			needed by true/false
+#include <limits.h>
+#include <string.h>
+#include <time.h>
 
 //======================================================================================================================================================150
 //	UTILITIES
@@ -27,6 +30,23 @@
 
 #include "./util/timer/timer.h"			// (in path specified here)
 #include "./util/num/num.h"				// (in path specified here)
+
+static FILE *open_output_file(const char *filename)
+{
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return fopen(filename, "w");
+	}
+
+	char output_path[PATH_MAX];
+	int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+	if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+		fprintf(stderr, "Output path is too long for '%s'\n", filename);
+		return NULL;
+	}
+
+	return fopen(output_path, "w");
+}
 
 //======================================================================================================================================================150
 //	MAIN FUNCTION HEADER
@@ -277,7 +297,11 @@ main(	int argc,
 	// dump results
 #ifdef OUTPUT
         FILE *fptr;
-	fptr = fopen("result.txt", "w");	
+	fptr = open_output_file("result.txt");
+	if (!fptr) {
+		printf("Unable to open result output file\n");
+		return EXIT_FAILURE;
+	}
 	for(i=0; i<dim_cpu.space_elem; i=i+1){
         	fprintf(fptr, "%f, %f, %f, %f\n", fv_cpu[i].v, fv_cpu[i].x, fv_cpu[i].y, fv_cpu[i].z);
 	}

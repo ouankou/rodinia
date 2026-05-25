@@ -20,12 +20,30 @@
 #include <string.h>
 #include <math.h>
 #include <cuda.h>
+#include <limits.h>
 
 #define MAX_THREADS_PER_BLOCK 512
 
 int no_of_nodes;
 int edge_list_size;
 FILE *fp;
+
+static FILE *open_output_file(const char *filename)
+{
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return fopen(filename, "w");
+	}
+
+	char output_path[PATH_MAX];
+	int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+	if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+		fprintf(stderr, "Output path is too long for '%s'\n", filename);
+		return NULL;
+	}
+
+	return fopen(output_path, "w");
+}
 
 //Structure to hold a node information
 struct Node
@@ -78,7 +96,11 @@ void BFSGraph( int argc, char** argv)
 
 	int source = 0;
 
-	fscanf(fp,"%d",&no_of_nodes);
+	if (fscanf(fp,"%d",&no_of_nodes) != 1) {
+		printf("Error reading node count\n");
+		fclose(fp);
+		return;
+	}
 
 	int num_of_blocks = 1;
 	int num_of_threads_per_block = no_of_nodes;
@@ -101,7 +123,11 @@ void BFSGraph( int argc, char** argv)
 	// initalize the memory
 	for( unsigned int i = 0; i < no_of_nodes; i++) 
 	{
-		fscanf(fp,"%d %d",&start,&edgeno);
+		if (fscanf(fp,"%d %d",&start,&edgeno) != 2) {
+			printf("Error reading node %u\n", i);
+			fclose(fp);
+			return;
+		}
 		h_graph_nodes[i].starting = start;
 		h_graph_nodes[i].no_of_edges = edgeno;
 		h_graph_mask[i]=false;
@@ -110,21 +136,31 @@ void BFSGraph( int argc, char** argv)
 	}
 
 	//read the source node from the file
-	fscanf(fp,"%d",&source);
-	source=0;
+	if (fscanf(fp,"%d",&source) != 1) {
+		printf("Error reading source node\n");
+		fclose(fp);
+		return;
+	}
 
 	//set the source node as true in the mask
 	h_graph_mask[source]=true;
 	h_graph_visited[source]=true;
 
-	fscanf(fp,"%d",&edge_list_size);
+	if (fscanf(fp,"%d",&edge_list_size) != 1) {
+		printf("Error reading edge list size\n");
+		fclose(fp);
+		return;
+	}
 
 	int id,cost;
 	int* h_graph_edges = (int*) malloc(sizeof(int)*edge_list_size);
 	for(int i=0; i < edge_list_size ; i++)
 	{
-		fscanf(fp,"%d",&id);
-		fscanf(fp,"%d",&cost);
+		if (fscanf(fp,"%d",&id) != 1 || fscanf(fp,"%d",&cost) != 1) {
+			printf("Error reading edge %d\n", i);
+			fclose(fp);
+			return;
+		}
 		h_graph_edges[i] = id;
 	}
 
@@ -207,11 +243,15 @@ void BFSGraph( int argc, char** argv)
 	cudaMemcpy( h_cost, d_cost, sizeof(int)*no_of_nodes, cudaMemcpyDeviceToHost) ;
 
 	//Store the result into a file
-	FILE *fpo = fopen("result.txt","w");
-	for(int i=0;i<no_of_nodes;i++)
-		fprintf(fpo,"%d) cost:%d\n",i,h_cost[i]);
-	fclose(fpo);
-	printf("Result stored in result.txt\n");
+	FILE *fpo = open_output_file("result.txt");
+	if (!fpo) {
+		printf("Unable to open result output file\n");
+	} else {
+		for(int i=0;i<no_of_nodes;i++)
+			fprintf(fpo,"%d) cost:%d\n",i,h_cost[i]);
+		fclose(fpo);
+		printf("Result stored in result.txt\n");
+	}
 
 
 	// cleanup memory

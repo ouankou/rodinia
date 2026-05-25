@@ -84,8 +84,11 @@ void cuda_print_double_array(double *array_GPU, size_t size) {
 __device__ double calcLikelihoodSum(unsigned char * I, int * ind, int numOnes, int index) {
     double likelihoodSum = 0.0;
     int x;
-    for (x = 0; x < numOnes; x++)
-        likelihoodSum += (pow((double) (I[ind[index * numOnes + x]] - 100), 2) - pow((double) (I[ind[index * numOnes + x]] - 228), 2)) / 50.0;
+    for (x = 0; x < numOnes; x++) {
+        double diff_bg = (double) I[ind[index * numOnes + x]] - 100.0;
+        double diff_fg = (double) I[ind[index * numOnes + x]] - 228.0;
+        likelihoodSum += ((diff_bg * diff_bg) - (diff_fg * diff_fg)) / 50.0;
+    }
     return likelihoodSum;
 }
 
@@ -117,7 +120,8 @@ __device__ double d_randu(int * seed, int index) {
     int num = A * seed[index] + C;
     seed[index] = num % M;
 
-    return fabs(seed[index] / ((double) M));
+    double value = fabs(seed[index] / ((double) M));
+    return value == 0.0 ? 1.0 / (double) M : value;
 }/**
 * Generates a uniformly distributed random number using the provided seed and GCC's settings for the Linear Congruential Generator (LCG)
 * @see http://en.wikipedia.org/wiki/Linear_congruential_generator
@@ -130,7 +134,8 @@ __device__ double d_randu(int * seed, int index) {
 double randu(int * seed, int index) {
     int num = A * seed[index] + C;
     seed[index] = num % M;
-    return fabs(seed[index] / ((double) M));
+    double value = fabs(seed[index] / ((double) M));
+    return value == 0.0 ? 1.0 / (double) M : value;
 }
 
 /**
@@ -275,7 +280,11 @@ __global__ void normalize_weights_kernel(double * weights, int Nparticles, doubl
     __syncthreads();
     
     if (i < Nparticles) {
-        weights[i] = weights[i] / sumWeights;
+        if (sumWeights <= 0.0 || !isfinite(sumWeights)) {
+            weights[i] = 1.0 / (double) Nparticles;
+        } else {
+            weights[i] = weights[i] / sumWeights;
+        }
     }
     
     __syncthreads(); 
@@ -460,8 +469,7 @@ void strelDisk(int * disk, int radius) {
     for (x = 0; x < diameter; x++) {
         for (y = 0; y < diameter; y++) {
             double distance = sqrt(pow((double) (x - radius + 1), 2) + pow((double) (y - radius + 1), 2));
-            if (distance < radius)
-                disk[x * diameter + y] = 1;
+            disk[x * diameter + y] = (distance < radius) ? 1 : 0;
         }
     }
 }
@@ -559,7 +567,13 @@ void getneighbors(int * se, int numOnes, int * neighbors, int radius) {
  */
 void videoSequence(unsigned char * I, int IszX, int IszY, int Nfr, int * seed) {
     int k;
-    int max_size = IszX * IszY * Nfr;
+    size_t total_size = (size_t)IszX * (size_t)IszY * (size_t)Nfr;
+    if (total_size > INT_MAX) {
+        fprintf(stderr, "Video sequence is too large for int indexing\n");
+        exit(EXIT_FAILURE);
+    }
+    int max_size = (int)total_size;
+    memset(I, 0, sizeof(unsigned char) * total_size);
     /*get object centers*/
     int x0 = (int) roundDouble(IszY / 2.0);
     int y0 = (int) roundDouble(IszX / 2.0);
@@ -577,7 +591,7 @@ void videoSequence(unsigned char * I, int IszX, int IszY, int Nfr, int * seed) {
     }
 
     /*dilate matrix*/
-    unsigned char * newMatrix = (unsigned char *) malloc(sizeof (unsigned char) * IszX * IszY * Nfr);
+    unsigned char * newMatrix = (unsigned char *) calloc(total_size, sizeof(unsigned char));
     imdilate_disk(I, IszX, IszY, Nfr, 5, newMatrix);
     int x, y;
     for (x = 0; x < IszX; x++) {
@@ -632,7 +646,12 @@ int findIndex(double * CDF, int lengthCDF, double value) {
  * @param Nparticles The number of particles to be used
  */
 void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, int Nparticles) {
-    int max_size = IszX * IszY*Nfr;
+    size_t total_size = (size_t)IszX * (size_t)IszY * (size_t)Nfr;
+    if (total_size > INT_MAX) {
+        fprintf(stderr, "Video sequence is too large for int indexing\n");
+        exit(EXIT_FAILURE);
+    }
+    int max_size = (int)total_size;
     //original particle centroid
     double xe = roundDouble(IszY / 2.0);
     double ye = roundDouble(IszX / 2.0);
@@ -713,7 +732,6 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
     }
 
     int k;
-    int indX, indY;
     //start send
     long long send_start = get_time();
     check_error(cudaMemcpy(I_GPU, I, sizeof (unsigned char) *IszX * IszY*Nfr, cudaMemcpyHostToDevice));
@@ -798,7 +816,7 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
 
 int main(int argc, char * argv[]) {
 
-    char* usage = "double.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
+    const char* usage = "double.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
     //check number of arguments
     if (argc != 9) {
         printf("%s\n", usage);
@@ -859,7 +877,7 @@ int main(int argc, char * argv[]) {
     int * seed = (int *) malloc(sizeof (int) *Nparticles);
     int i;
     for (i = 0; i < Nparticles; i++)
-        seed[i] = time(0) * i;
+        seed[i] = i + 1;
     //malloc matrix
     unsigned char * I = (unsigned char *) malloc(sizeof (unsigned char) *IszX * IszY * Nfr);
     long long start = get_time();

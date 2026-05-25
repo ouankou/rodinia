@@ -31,9 +31,9 @@
 static	char	rcsid[] = "$Id: err.c,v 1.6 1995/01/30 14:49:14 des Exp $";
 
 #include	<stdio.h>
-#include <unistd.h>
 #include	<setjmp.h>
 #include	<ctype.h>
+#include	<unistd.h>
 #include        "err.h"
 
 
@@ -363,5 +363,4 @@ void	catch_FPE()
 {
    signal(SIGFPE,float_error);
 }
-
 

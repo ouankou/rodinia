@@ -9,6 +9,8 @@
 //======================================================================================================================================================
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <limits.h>
 #include <math.h>
 #include <string.h>
 
@@ -60,13 +62,24 @@ void write_data(	char* filename,
 
 	FILE* fid;
 	int i,j;
-	char c;
 
 	//================================================================================80
 	//	OPEN FILE FOR READING
 	//================================================================================80
 
-	fid = fopen(filename, "w+");
+	char output_path[PATH_MAX];
+	const char *output_file = filename;
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (output_dir && output_dir[0] != '\0') {
+		int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+		if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+			fprintf(stderr, "Output path is too long for '%s'\n", filename);
+			return;
+		}
+		output_file = output_path;
+	}
+
+	fid = fopen(output_file, "w+");
 	if( fid == NULL ){
 		printf( "The file was not opened for writing\n" );
 		return;
@@ -83,7 +96,7 @@ void write_data(	char* filename,
 	for(j=0; j<frames_processed;j++)
 	  {
 	    fprintf(fid, "\n---Frame %d---",j);
-	    fprintf(fid, "\n--endo--\n",j);
+	    fprintf(fid, "\n--endo--\n");
 	    for(i=0; i<endoPoints; i++){
 	      fprintf(fid, "%d\t", input_a[j+i*frameNo]);
 	    }
@@ -92,7 +105,7 @@ void write_data(	char* filename,
 	      // if(input_b[j*size+i] > 2000) input_b[j*size+i]=0;
 	      fprintf(fid, "%d\t", input_b[j+i*frameNo]);
 	    }
-	    fprintf(fid, "\n--epi--\n",j);
+	    fprintf(fid, "\n--epi--\n");
 	    for(i=0; i<epiPoints; i++){
 	      //if(input_2a[j*size_2+i] > 2000) input_2a[j*size_2+i]=0;
 	      fprintf(fid, "%d\t", input_2a[j+i*frameNo]);

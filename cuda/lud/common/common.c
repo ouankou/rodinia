@@ -48,7 +48,10 @@ create_matrix_from_file(float **mp, const char* filename, int *size_p){
       return RET_FAILURE;
   }
 
-  fscanf(fp, "%d\n", &size);
+  if (fscanf(fp, "%d\n", &size) != 1) {
+      fclose(fp);
+      return RET_FAILURE;
+  }
 
   m = (float*) malloc(sizeof(float)*size*size);
   if ( m == NULL) {
@@ -58,7 +61,11 @@ create_matrix_from_file(float **mp, const char* filename, int *size_p){
 
   for (i=0; i < size; i++) {
       for (j=0; j < size; j++) {
-          fscanf(fp, "%f ", m+i*size+j);
+          if (fscanf(fp, "%f ", m+i*size+j) != 1) {
+              free(m);
+              fclose(fp);
+              return RET_FAILURE;
+          }
       }
   }
 
@@ -139,7 +146,12 @@ matrix_multiply(float *inputa, float *inputb, float *output, int size){
 func_ret_t
 lud_verify(float *m, float *lu, int matrix_dim){
   int i,j,k;
-  float *tmp = (float*)malloc(matrix_dim*matrix_dim*sizeof(float));
+  float *tmp = (float*)malloc((size_t)matrix_dim * (size_t)matrix_dim * sizeof(float));
+  func_ret_t ret = RET_SUCCESS;
+
+  if (tmp == NULL) {
+    return RET_FAILURE;
+  }
 
   for (i=0; i < matrix_dim; i ++)
     for (j=0; j< matrix_dim; j++) {
@@ -179,11 +191,14 @@ lud_verify(float *m, float *lu, int matrix_dim){
 
   for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim; j++){
-          if ( fabs(m[i*matrix_dim+j]-tmp[i*matrix_dim+j]) > 0.0001)
+          if ( fabs(m[i*matrix_dim+j]-tmp[i*matrix_dim+j]) > 0.0001) {
             printf("dismatch at (%d, %d): (o)%f (n)%f\n", i, j, m[i*matrix_dim+j], tmp[i*matrix_dim+j]);
+            ret = RET_FAILURE;
+          }
       }
   }
   free(tmp);
+  return ret;
 }
 
 void
@@ -212,8 +227,12 @@ create_matrix(float **mp, int size){
   float *m;
   int i,j;
   float lamda = -0.001;
-  float coe[2*size-1];
+  float *coe = (float *)malloc(sizeof(float)*(2*size-1));
   float coe_i =0.0;
+
+  if (coe == NULL) {
+      return RET_FAILURE;
+  }
 
   for (i=0; i < size; i++)
     {
@@ -226,6 +245,7 @@ create_matrix(float **mp, int size){
 
   m = (float*) malloc(sizeof(float)*size*size);
   if ( m == NULL) {
+      free(coe);
       return RET_FAILURE;
   }
 
@@ -237,5 +257,6 @@ create_matrix(float **mp, int size){
 
   *mp = m;
 
+  free(coe);
   return RET_SUCCESS;
 }

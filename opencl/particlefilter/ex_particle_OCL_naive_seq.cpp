@@ -238,7 +238,8 @@ void setIf(int testValue, int newValue, int * array3D, int * dimX, int * dimY, i
 double randu(int * seed, int index) {
     int num = A * seed[index] + C;
     seed[index] = num % M;
-    return fabs(seed[index] / ((double) M));
+    double value = fabs(seed[index] / ((double) M));
+    return value == 0.0 ? 1.0 / (double) M : value;
 }//eo randu
 
 /**
@@ -288,8 +289,7 @@ void strelDisk(int * disk, int radius) {
     for (x = 0; x < diameter; x++) {
         for (y = 0; y < diameter; y++) {
             double distance = sqrt(pow((double) (x - radius + 1), 2) + pow((double) (y - radius + 1), 2));
-            if (distance < radius)
-                disk[x * diameter + y] = 1;
+            disk[x * diameter + y] = (distance < radius) ? 1 : 0;
         }
     }
 }
@@ -388,6 +388,8 @@ void getneighbors(int * se, int numOnes, double * neighbors, int radius) {
 void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed) {
     int k;
     int max_size = IszX * IszY*Nfr;
+    size_t total_size = (size_t) max_size;
+    memset(I, 0, sizeof(int) * total_size);
     /*get object centers*/
     int x0 = (int) roundDouble(IszY / 2.0);
     int y0 = (int) roundDouble(IszX / 2.0);
@@ -405,7 +407,7 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed) {
     }
 
     /*dilate matrix*/
-    int * newMatrix = (int *) malloc(sizeof (int) *IszX * IszY * Nfr);
+    int * newMatrix = (int *) calloc(total_size, sizeof(int));
     imdilate_disk(I, IszX, IszY, Nfr, 5, newMatrix);
     int x, y;
     for (x = 0; x < IszX; x++) {
@@ -710,8 +712,15 @@ int particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Npartic
 		}
 		long long sum_time = get_time();
 		printf("TIME TO SUM WEIGHTS TOOK: %f\n", elapsed_time(exponential, sum_time));
-		for (x = 0; x < Nparticles; x++) {
-			weights[x] = weights[x] / sumWeights;
+			if (sumWeights <= 0.0 || !isfinite(sumWeights)) {
+			double uniform = 1.0 / (double) Nparticles;
+			for (x = 0; x < Nparticles; x++) {
+				weights[x] = uniform;
+			}
+		} else {
+			for (x = 0; x < Nparticles; x++) {
+				weights[x] = weights[x] / sumWeights;
+			}
 		}
 		long long normalize = get_time();
 		printf("TIME TO NORMALIZE WEIGHTS TOOK: %f\n", elapsed_time(sum_time, normalize));
@@ -900,12 +909,12 @@ int main(int argc, char * argv[]) {
         return 0;
     }
     //establish seed
-    int * seed = (int *) malloc(sizeof (int) *Nparticles);
+    int * seed = (int *) calloc(Nparticles, sizeof(int));
     int i;
     for (i = 0; i < Nparticles; i++)
-        seed[i] = time(0) * i;
-    //malloc matrix
-    int * I = (int *) malloc(sizeof (int) *IszX * IszY * Nfr);
+        seed[i] = i + 1;
+    //calloc matrix
+    int * I = (int *) calloc(IszX * IszY * Nfr, sizeof(int));
     long long start = get_time();
     //call video sequence
     videoSequence(I, IszX, IszY, Nfr, seed);

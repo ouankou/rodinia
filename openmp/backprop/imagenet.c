@@ -10,6 +10,6 @@ void load(BPNN *net) {
   int nr = layer_size;
 
   for (int i = 0, k = 1; i < nr; i++, k++) {
-    units[k] = (float)rand() / (float)RAND_MAX;
+    units[k] = (float)((double)rand() / (double)RAND_MAX);
   }
 }

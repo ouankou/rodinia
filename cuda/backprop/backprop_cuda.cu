@@ -193,7 +193,8 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #endif   
   
-  
+  *eo = out_err;
+  *eh = hid_err;
   
 
 }

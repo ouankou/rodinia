@@ -489,39 +489,6 @@ void _clInit(string device_type, int device_id){
 	double t3 = gettime();
 	KC += t3 - t2;
 #endif
-    //get program information in intermediate representation
-#ifdef PTX_MSG    
-    size_t binary_sizes[deviceListSize];
-    char * binaries[deviceListSize];
-    //figure out number of devices and the sizes of the binary for each device. 
-    oclHandles.cl_status = clGetProgramInfo(oclHandles.program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t)*deviceListSize, &binary_sizes, NULL );
-    if(oclHandles.cl_status!=CL_SUCCESS){
-        throw(string("--cambine:exception in _InitCL -> clGetProgramInfo-2"));
-    }
-
-    std::cout<<"--cambine:"<<binary_sizes<<std::endl;
-    //copy over all of the generated binaries. 
-    for(int i=0;i<deviceListSize;i++)
-	binaries[i] = (char *)malloc( sizeof(char)*(binary_sizes[i]+1));
-    oclHandles.cl_status = clGetProgramInfo(oclHandles.program, CL_PROGRAM_BINARIES, sizeof(char *)*deviceListSize, binaries, NULL );
-    if(oclHandles.cl_status!=CL_SUCCESS){
-        throw(string("--cambine:exception in _InitCL -> clGetProgramInfo-3"));
-    }
-    for(int i=0;i<deviceListSize;i++)
-      binaries[i][binary_sizes[i]] = '\0';
-    std::cout<<"--cambine:writing ptd information..."<<std::endl;
-    string ptx_path = rodinia_output_path("cl.ptx");
-    FILE * ptx_file = fopen(ptx_path.c_str(), "w");
-    if(ptx_file==NULL){
-	throw(string("exceptions in allocate ptx file."));
-    }
-    fprintf(ptx_file,"%s",binaries[DEVICE_ID_INUSED]);
-    fclose(ptx_file);
-    std::cout<<"--cambine:writing ptd information done."<<std::endl;
-    for(int i=0;i<deviceListSize;i++)
-	free(binaries[i]);
-#endif
-
     for (int nKernel = 0; nKernel < total_kernels; nKernel++)
     {
         // get a kernel object handle for a kernel with the given name 

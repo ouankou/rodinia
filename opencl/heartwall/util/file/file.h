@@ -40,7 +40,7 @@ read_data(	char* filename,
 //===============================================================================================================================================================================================================200
 
 void 
-write_data(	char* filename,
+write_data(	const char* filename,
 		int frameNo,
                 int frames_processed,
 		int endoPoints,

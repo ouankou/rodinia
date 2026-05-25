@@ -289,7 +289,8 @@ main(	int argc,
 	    if (written > 0 && (size_t)written < sizeof(output_full)) {
 	      output_path = output_full;
 	    } else {
-	      fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
+	      fprintf(stderr, "Output path is too long for '%s'\n", output_path);
+	      return EXIT_FAILURE;
 	    }
 	  }
 	  pFile = fopen(output_path, "w");

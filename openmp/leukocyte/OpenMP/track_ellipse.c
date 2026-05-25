@@ -1,4 +1,24 @@
 #include "track_ellipse.h"
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+static FILE *open_output_file(const char *filename)
+{
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return fopen(filename, "w+");
+	}
+
+	char output_path[PATH_MAX];
+	int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+	if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+		fprintf(stderr, "Output path is too long for '%s'\n", filename);
+		return NULL;
+	}
+
+	return fopen(output_path, "w+");
+}
 
 
 void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np, int Nf) {
@@ -104,10 +124,10 @@ void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np,
 			ycavg = ycavg / (double) (frame_num > 10 ? 10 : frame_num);
 			
 			// Determine the range of the subimage surrounding the current position
-			int u1 = max(xci - 4.0 * R + 0.5, 0 );
-			int u2 = min(xci + 4.0 * R + 0.5, Iw - 1);
-			int v1 = max(yci - 2.0 * R + 1.5, 0 );    
-			int v2 = min(yci + 2.0 * R + 1.5, Ih - 1);
+			int u1 = (int)fmax(xci - 4.0 * R + 0.5, 0.0);
+			int u2 = (int)fmin(xci + 4.0 * R + 0.5, (double)(Iw - 1));
+			int v1 = (int)fmax(yci - 2.0 * R + 1.5, 0.0);
+			int v2 = (int)fmin(yci + 2.0 * R + 1.5, (double)(Ih - 1));
 			
 			// Extract the subimage
 			MAT *Isub = m_get(v2 - v1 + 1, u2 - u1 + 1);
@@ -169,7 +189,11 @@ void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np,
 		if (frame_num == Nf)
 		  {
 		    FILE * pFile;
-		    pFile = fopen ("result.txt","w+");
+		    pFile = open_output_file("result.txt");
+		    if (pFile == NULL) {
+		      fprintf(stderr, "Failed to open result output file\n");
+		      continue;
+		    }
 	
 		    for (cell_num = 0; cell_num < Nc; cell_num++)		
 		      fprintf(pFile,"\n%d,%f,%f", cell_num, xc[cell_num][Nf], yc[cell_num][Nf]);

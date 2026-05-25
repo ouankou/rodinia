@@ -20,8 +20,8 @@
 
 #define fastcopy(to,from,len)\
 {\
-  register char *_to,*_from;\
-  register int _i,_l;\
+  char *_to,*_from;\
+  int _i,_l;\
   _to = (char *)(to);\
   _from = (char *)(from);\
   _l = (len);\
@@ -108,7 +108,7 @@ void bpnn_randomize_weights(float **w, int m, int n)
 
   for (i = 0; i <= m; i++) {
     for (j = 0; j <= n; j++) {
-     w[i][j] = (float) rand()/(float)RAND_MAX;
+     w[i][j] = (float)((double)rand() / (double)RAND_MAX);
     //  w[i][j] = dpn1();
     }
   }

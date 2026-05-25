@@ -209,7 +209,7 @@ VEC	*x, *out;
 #ifdef PROTOTYPES_IN_STRUCT
 VEC	*v_map(double (*f)(double), const VEC *x, VEC *out)
 #else
-VEC	*v_map(double (*f)(), const VEC *x, VEC *out)
+VEC	*v_map(double (*f)(double), const VEC *x, VEC *out)
 #endif
 #endif
 {
@@ -238,7 +238,7 @@ VEC	*x, *out;
 #ifdef PROTOTYPES_IN_STRUCT
 VEC	*_v_map(double (*f)(void *,double), void *params, const VEC *x, VEC *out)
 #else
-VEC	*_v_map(double (*f)(), void *params, const VEC *x, VEC *out)
+VEC	*_v_map(double (*f)(void *,double), void *params, const VEC *x, VEC *out)
 #endif
 #endif
 {
@@ -312,7 +312,7 @@ VEC  *v_linlist(VEC *out,VEC *v1,double a1,...)
    va_start(ap, a1);
    out = sv_mlt(a1,v1,out);
    
-   while (par = va_arg(ap,VEC *)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,VEC *))) {   /* NULL ends the list*/
       a_par = va_arg(ap,double);
       if (a_par == 0.0) continue;
       if ( out == par )		
@@ -357,7 +357,7 @@ VEC  *v_linlist(va_alist) va_dcl
    a_par = va_arg(ap,double);
    out = sv_mlt(a_par,par,out);
    
-   while (par = va_arg(ap,VEC *)) {   /* NULL ends the list*/
+   while ((par = va_arg(ap,VEC *))) {   /* NULL ends the list*/
       a_par = va_arg(ap,double);
       if (a_par == 0.0) continue;
       if ( out == par )		

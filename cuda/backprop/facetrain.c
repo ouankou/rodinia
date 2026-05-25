@@ -6,15 +6,11 @@
 #include "backprop.h"
 #include "omp.h"
 
-extern char *strcpy();
-extern void exit();
-
 int layer_size = 0;
 
-backprop_face()
+static void backprop_face(void)
 {
   BPNN *net;
-  int i;
   float out_err, hid_err;
   net = bpnn_create(layer_size, 16, 1); // (16, 1 can not be changed)
   
@@ -23,31 +19,27 @@ backprop_face()
   //entering the training kernel, only one iteration
   printf("Starting training kernel\n");
   bpnn_train_cuda(net, &out_err, &hid_err);
+  printf("Output error: %.8f\n", out_err);
+  printf("Hidden error: %.8f\n", hid_err);
   bpnn_free(net);
   printf("Training done\n");
 }
 
-int setup(argc, argv)
-int argc;
-char *argv[];
+int setup(int argc, char **argv)
 {
-	
-  int seed;
-
   if (argc!=2){
   fprintf(stderr, "usage: backprop <num of input elements>\n");
-  exit(0);
+  return 1;
   }
   layer_size = atoi(argv[1]);
   if (layer_size%16!=0){
   fprintf(stderr, "The number of input points must be divided by 16\n");
-  exit(0);
+  return 1;
   }
-  
 
-  seed = 7;   
+  int seed = 7;
   bpnn_initialize(seed);
   backprop_face();
 
-  exit(0);
+  return 0;
 }

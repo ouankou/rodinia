@@ -243,7 +243,7 @@ kernel_gpu_opencl_wrapper(	params_common common,
 							NULL, 
 							NULL);
 	// Print warnings and errors from compilation
-	static cl_char log[65536]; 
+	static char log[65536];
 	memset(log, 0, sizeof(log));
 	clGetProgramBuildInfo(	program, 
 							device, 

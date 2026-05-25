@@ -94,7 +94,7 @@ main( int argc, char** argv)
 	if(strcmp(argv[1],"r")==0) {
 	for (int i = 0; i < numElements; i++) {
 	// Generate random floats between 0 and 1 for the input data
-		cpu_idata[i] = ((float) rand() / RAND_MAX); 
+		cpu_idata[i] = (float)((double)rand() / (double)RAND_MAX);
 	//Compare data at index to data minimum, if less than current minimum, set that element as new minimum
 		datamin = min(cpu_idata[i], datamin);
 	//Same as above but for maximum
@@ -105,7 +105,10 @@ main( int argc, char** argv)
 	FILE *fp;
 	fp = fopen(argv[1],"r");
 	for(int i = 0; i < numElements; i++) {
-	fscanf(fp,"%f",&cpu_idata[i]);
+	if (fscanf(fp,"%f",&cpu_idata[i]) != 1) {
+		fprintf(stderr, "Error reading input value %d\n", i);
+		exit(EXIT_FAILURE);
+	}
 	datamin = min(cpu_idata[i], datamin);
 	datamax = max(cpu_idata[i],datamax);
 	}

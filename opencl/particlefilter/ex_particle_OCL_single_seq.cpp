@@ -197,7 +197,8 @@ float elapsed_time(long long start_time, long long end_time) {
 float randu(int * seed, int index) {
     int num = A * seed[index] + C;
     seed[index] = num % M;
-    return fabs(seed[index] / ((float) M));
+    float value = fabs(seed[index] / ((float) M));
+    return value == 0.0f ? 1.0f / (float) M : value;
 }
 
 /**
@@ -966,7 +967,8 @@ int particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, i
         if (written > 0 && (size_t)written < sizeof(output_full)) {
             output_path = output_full;
         } else {
-            fprintf(stderr, "Warning: constructed output path is too long, falling back to '%s'\n", output_path);
+            fprintf(stderr, "Output path is too long for '%s'\n", output_path);
+            return -1;
         }
     }
     FILE *fid;

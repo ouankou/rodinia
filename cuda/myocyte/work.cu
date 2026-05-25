@@ -9,6 +9,24 @@
 #include "master.cu"
 #include "embedded_fehlberg_7_8.cu"
 #include "solver.cu"
+#include <limits.h>
+
+static FILE *open_output_file(const char *filename)
+{
+	const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+	if (!output_dir || output_dir[0] == '\0') {
+		return fopen(filename, "w");
+	}
+
+	char output_path[PATH_MAX];
+	int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir, filename);
+	if (written <= 0 || (size_t)written >= sizeof(output_path)) {
+		fprintf(stderr, "Output path is too long for '%s'\n", filename);
+		return NULL;
+	}
+
+	return fopen(output_path, "w");
+}
 
 //====================================================================================================100
 //	MAIN FUNCTION
@@ -123,7 +141,7 @@ int work(	int xmax,
 
 	// y
 	for(i=0; i<workload; i++){
-		read(	"../../data/myocyte/y.txt",
+		read_file(	"../../data/myocyte/y.txt",
 					y[i][0],
 					EQUATIONS,
 					1,
@@ -132,7 +150,7 @@ int work(	int xmax,
 
 	// params
 	for(i=0; i<workload; i++){
-		read("../../data/myocyte/params.txt",
+		read_file("../../data/myocyte/params.txt",
 					params[i],
 					PARAMETERS - 2,
 					1,
@@ -168,10 +186,10 @@ int work(	int xmax,
 
 
 	  FILE * pFile;
-	  pFile = fopen ("output.txt","w");
+	  pFile = open_output_file("output.txt");
 	  if (pFile==NULL)
 	    {
-	  fputs ("fopen example",pFile);
+	  perror("output.txt");
 	  return -1;
 	}
 	  // print results

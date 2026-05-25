@@ -41,13 +41,13 @@ void run(int argc, char** argv);
 
 
 void 
-fatal(char *s)
+fatal(const char *s)
 {
 	fprintf(stderr, "error: %s\n", s);
 
 }
 
-void writeoutput(float *vect, int grid_rows, int grid_cols, char *file){
+void writeoutput(float *vect, int grid_rows, int grid_cols, const char *file){
 
 	int i,j, index=0;
 	FILE *fp;
@@ -70,7 +70,7 @@ void writeoutput(float *vect, int grid_rows, int grid_cols, char *file){
 }
 
 
-void readinput(float *vect, int grid_rows, int grid_cols, char *file){
+void readinput(float *vect, int grid_rows, int grid_cols, const char *file){
 
   	int i,j;
 	FILE *fp;
@@ -84,8 +84,7 @@ void readinput(float *vect, int grid_rows, int grid_cols, char *file){
 	for (i=0; i <= grid_rows-1; i++) 
 	 for (j=0; j <= grid_cols-1; j++)
 	 {
-		fgets(str, STR_SIZE, fp);
-		if (feof(fp))
+		if (fgets(str, STR_SIZE, fp) == NULL)
 			fatal("not enough lines in file");
 		//if ((sscanf(str, "%d%f", &index, &val) != 2) || (index != ((i-1)*(grid_cols-2)+j-1)))
 		if ((sscanf(str, "%f", &val) != 1))
