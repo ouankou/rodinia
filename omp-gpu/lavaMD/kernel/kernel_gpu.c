@@ -110,23 +110,7 @@ void  kernel_gpu(	par_str par,
 	//	PROCESS INTERACTIONS
 	//======================================================================================================================================================150
 
-//	#pragma omp	parallel for \
-	//			private(i, j, k) \
-	//			private(first_i, rA, fA) \
-//				private(pointer, first_j, rB, qB) \
-	//			private(r2, u2, fs, vij, fxij, fyij, fzij, d)
- /*
- void  kernel_cpu(	par_str par,
-					dim_str dim,
-					box_str* box,
-					FOUR_VECTOR* rv,
-					fp* qv,
-					FOUR_VECTOR* fv
-
-          )
-          */
- //dim.number_boxes = 1000; box[l].nn = 11;
- #pragma omp target teams distribute map(tofrom: fv[0:dim.space_elem]) map(to: par, dim, rv[0:dim.space_elem], qv[0:dim.space_elem], box[0:dim.number_boxes])  \
+#pragma omp target teams distribute parallel for map(tofrom: fv[0:dim.space_elem]) map(to: par, dim, rv[0:dim.space_elem], qv[0:dim.space_elem], box[0:dim.number_boxes])  \
         private(i, j, k) \
 				private(first_i, rA, fA) \
 				private(pointer, first_j, rB, qB) \
@@ -180,9 +164,6 @@ void  kernel_gpu(	par_str par,
 			//----------------------------------------50
 			//	Do for the # of particles in home box
 			//----------------------------------------50
-      //NUMBER_PAR_PER_BOX = 100;
-      //This part improved the performance by 1s
-      #pragma omp parallel for collapse(2)
 			for (i=0; i<NUMBER_PAR_PER_BOX; i=i+1){
 
 				// do for the # of particles in current (home or neighbor) box

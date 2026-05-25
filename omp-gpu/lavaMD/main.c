@@ -224,8 +224,8 @@ main(	int argc,
 	//	PARAMETERS, DISTANCE, CHARGE AND FORCE
 	//====================================================================================================100
 
-	// random generator seed set to random value - time in this case
-	srand(time(NULL));
+	// random generator seed set to deterministic value for repeatability
+	srand(7);
 
 	// input (distances)
 	rv_cpu = (FOUR_VECTOR*)malloc(dim_cpu.space_mem);

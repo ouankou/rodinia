@@ -101,37 +101,54 @@ void hotspot_opt1(float *pIn, float* tIn, float *tOut,
 
     int c,w,e,n,s,b,t;
     int x,y,z;
-    int i = 0;
-    float *finalOut = tOut;
-    do{
-    #pragma omp target teams distribute parallel for \
-    map(to: tIn[0: size], pIn[0:size]) \
-    map(from: tOut[0: size]) firstprivate(nx, ny, nz, ce, cw, cn, cs, ct, cb, cc, dt, Cap, amb_temp) \
- collapse(3) private(x,y,z,c,w,e,n,s,b,t)
-        for(z = 0; z < nz; z++)
-            for(y = 0; y < ny; y++)
-                for(x = 0; x < nx; x++)
-                {
-                    c = x + y * nx + z * nx * ny;
+    int i;
+#pragma omp target data map(to : pIn [0:size]) map(tofrom : tIn [0:size])     \
+    map(alloc : tOut [0:size])
+    {
+        for(i = 0; i < numiter; i++) {
+            if ((i & 1) == 0) {
+#pragma omp target teams distribute parallel for firstprivate(nx, ny, nz, ce, cw, cn, cs, ct, cb, cc, dt, Cap, amb_temp) collapse(3) private(x,y,z,c,w,e,n,s,b,t)
+                for(z = 0; z < nz; z++)
+                    for(y = 0; y < ny; y++)
+                        for(x = 0; x < nx; x++)
+                        {
+                            c = x + y * nx + z * nx * ny;
 
-                    w = (x == 0) ? c      : c - 1;
-                    e = (x == nx - 1) ? c : c + 1;
-                    n = (y == 0) ? c      : c - nx;
-                    s = (y == ny - 1) ? c : c + nx;
-                    b = (z == 0) ? c      : c - nx * ny;
-                    t = (z == nz - 1) ? c : c + nx * ny;
+                            w = (x == 0) ? c      : c - 1;
+                            e = (x == nx - 1) ? c : c + 1;
+                            n = (y == 0) ? c      : c - nx;
+                            s = (y == ny - 1) ? c : c + nx;
+                            b = (z == 0) ? c      : c - nx * ny;
+                            t = (z == nz - 1) ? c : c + nx * ny;
 
-                    tOut[c] = tIn[c]*cc + tIn[n]*cn + tIn[s]*cs + tIn[e]*ce + tIn[w]*cw + tIn[t]*ct + tIn[b]*cb + (dt/Cap) * pIn[c] + ct*amb_temp;
-                }
-        float *temp = tIn;
-        tIn = tOut;
-        tOut = temp;
-        i++;
-    }
-    while(i < numiter);
+                            tOut[c] = tIn[c]*cc + tIn[n]*cn + tIn[s]*cs + tIn[e]*ce + tIn[w]*cw + tIn[t]*ct + tIn[b]*cb + (dt/Cap) * pIn[c] + ct*amb_temp;
+                        }
+            } else {
+#pragma omp target teams distribute parallel for firstprivate(nx, ny, nz, ce, cw, cn, cs, ct, cb, cc, dt, Cap, amb_temp) collapse(3) private(x,y,z,c,w,e,n,s,b,t)
+                for(z = 0; z < nz; z++)
+                    for(y = 0; y < ny; y++)
+                        for(x = 0; x < nx; x++)
+                        {
+                            c = x + y * nx + z * nx * ny;
 
-    if (tIn != finalOut) {
-        memcpy(finalOut, tIn, size * sizeof(float));
+                            w = (x == 0) ? c      : c - 1;
+                            e = (x == nx - 1) ? c : c + 1;
+                            n = (y == 0) ? c      : c - nx;
+                            s = (y == ny - 1) ? c : c + nx;
+                            b = (z == 0) ? c      : c - nx * ny;
+                            t = (z == nz - 1) ? c : c + nx * ny;
+
+                            tIn[c] = tOut[c]*cc + tOut[n]*cn + tOut[s]*cs + tOut[e]*ce + tOut[w]*cw + tOut[t]*ct + tOut[b]*cb + (dt/Cap) * pIn[c] + ct*amb_temp;
+                        }
+            }
+        }
+
+        if ((numiter & 1) == 0) {
+#pragma omp target update from(tIn [0:size])
+            memcpy(tOut, tIn, size * sizeof(float));
+        } else {
+#pragma omp target update from(tOut [0:size])
+        }
     }
 }
 

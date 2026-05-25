@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 
   // parameters
   public_struct public;
-  private_struct private[ALL_POINTS];
+  private_struct point_priv[ALL_POINTS];
 
   //======================================================================================================================================================
   // 	FRAMES
@@ -313,13 +313,13 @@ int main(int argc, char *argv[]) {
   //======================================================================================================================================================
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].in_partial_sum =
+    point_priv[i].in_partial_sum =
         omp_target_alloc(sizeof(fp) * 2 * public.tSize + 1, device_id);
-    private[i].in_sqr_partial_sum =
+    point_priv[i].in_sqr_partial_sum =
         omp_target_alloc(sizeof(fp) * 2 * public.tSize + 1, device_id);
-    private[i].par_max_val = omp_target_alloc(
+    point_priv[i].par_max_val = omp_target_alloc(
         sizeof(fp) * (2 * public.tSize + 2 * public.sSize + 1), device_id);
-    private[i].par_max_coo = omp_target_alloc(
+    point_priv[i].par_max_coo = omp_target_alloc(
         sizeof(int) * (2 * public.tSize + 2 * public.sSize + 1), device_id);
   }
 
@@ -333,8 +333,8 @@ int main(int argc, char *argv[]) {
   public.in2_mem = sizeof(fp) * public.in2_elem;
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_in2 = omp_target_alloc(public.in2_mem, device_id);
-    private[i].d_in2_sqr = omp_target_alloc(public.in2_mem, device_id);
+    point_priv[i].d_in2 = omp_target_alloc(public.in2_mem, device_id);
+    point_priv[i].d_in2_sqr = omp_target_alloc(public.in2_mem, device_id);
   }
 
   //======================================================================================================================================================
@@ -347,8 +347,8 @@ int main(int argc, char *argv[]) {
   public.in_mod_mem = sizeof(fp) * public.in_mod_elem;
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_in_mod = omp_target_alloc(public.in_mod_mem, device_id);
-    private[i].d_in_sqr = omp_target_alloc(public.in_mod_mem, device_id);
+    point_priv[i].d_in_mod = omp_target_alloc(public.in_mod_mem, device_id);
+    point_priv[i].d_in_sqr = omp_target_alloc(public.in_mod_mem, device_id);
   }
 
   //======================================================================================================================================================
@@ -361,27 +361,27 @@ int main(int argc, char *argv[]) {
       omp_target_alloc(public.in_mod_mem * public.epiPoints, device_id);
 
   //======================================================================================================================================================
-  // 	SETUP private POINTERS TO ROWS, COLS  AND TEMPLATE
+  // 	SETUP point_priv POINTERS TO ROWS, COLS  AND TEMPLATE
   //======================================================================================================================================================
 
   for (i = 0; i < public.endoPoints; i++) {
-    private[i].point_no = i;
-    private[i].in_pointer = private[i].point_no * public.in_mod_elem;
-    private[i].d_Row = public.d_endoRow;         // original row coordinates
-    private[i].d_Col = public.d_endoCol;         // original col coordinates
-    private[i].d_tRowLoc = public.d_tEndoRowLoc; // updated row coordinates
-    private[i].d_tColLoc = public.d_tEndoColLoc; // updated row coordinates
-    private[i].d_T = public.d_endoT;             // templates
+    point_priv[i].point_no = i;
+    point_priv[i].in_pointer = point_priv[i].point_no * public.in_mod_elem;
+    point_priv[i].d_Row = public.d_endoRow;         // original row coordinates
+    point_priv[i].d_Col = public.d_endoCol;         // original col coordinates
+    point_priv[i].d_tRowLoc = public.d_tEndoRowLoc; // updated row coordinates
+    point_priv[i].d_tColLoc = public.d_tEndoColLoc; // updated row coordinates
+    point_priv[i].d_T = public.d_endoT;             // templates
   }
 
   for (i = public.endoPoints; i < public.allPoints; i++) {
-    private[i].point_no = i - public.endoPoints;
-    private[i].in_pointer = private[i].point_no * public.in_mod_elem;
-    private[i].d_Row = public.d_epiRow;
-    private[i].d_Col = public.d_epiCol;
-    private[i].d_tRowLoc = public.d_tEpiRowLoc;
-    private[i].d_tColLoc = public.d_tEpiColLoc;
-    private[i].d_T = public.d_epiT;
+    point_priv[i].point_no = i - public.endoPoints;
+    point_priv[i].in_pointer = point_priv[i].point_no * public.in_mod_elem;
+    point_priv[i].d_Row = public.d_epiRow;
+    point_priv[i].d_Col = public.d_epiCol;
+    point_priv[i].d_tRowLoc = public.d_tEpiRowLoc;
+    point_priv[i].d_tColLoc = public.d_tEpiColLoc;
+    point_priv[i].d_T = public.d_epiT;
   }
 
   //======================================================================================================================================================
@@ -398,7 +398,7 @@ int main(int argc, char *argv[]) {
   public.conv_mem = sizeof(fp) * public.conv_elem;
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_conv = omp_target_alloc(public.conv_mem, device_id);
+    point_priv[i].d_conv = omp_target_alloc(public.conv_mem, device_id);
   }
 
   //======================================================================================================================================================
@@ -420,7 +420,7 @@ int main(int argc, char *argv[]) {
   public.in2_pad_mem = sizeof(fp) * public.in2_pad_elem;
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_in2_pad = omp_target_alloc(public.in2_pad_mem, device_id);
+    point_priv[i].d_in2_pad = omp_target_alloc(public.in2_pad_mem, device_id);
   }
 
   //====================================================================================================
@@ -447,7 +447,7 @@ int main(int argc, char *argv[]) {
   public.in2_sub_mem = sizeof(fp) * public.in2_sub_elem;
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_in2_sub = omp_target_alloc(public.in2_sub_mem, device_id);
+    point_priv[i].d_in2_sub = omp_target_alloc(public.in2_sub_mem, device_id);
   }
 
   //====================================================================================================
@@ -472,7 +472,7 @@ int main(int argc, char *argv[]) {
   public.in2_sub2_sqr_mem = sizeof(fp) * public.in2_sub2_sqr_elem;
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_in2_sub2_sqr =
+    point_priv[i].d_in2_sub2_sqr =
         omp_target_alloc(public.in2_sub2_sqr_mem, device_id);
   }
 
@@ -510,7 +510,7 @@ int main(int argc, char *argv[]) {
   public.tMask_mem = sizeof(fp) * public.tMask_elem;
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_tMask = omp_target_alloc(public.tMask_mem, device_id);
+    point_priv[i].d_tMask = omp_target_alloc(public.tMask_mem, device_id);
   }
 
   //======================================================================================================================================================
@@ -541,7 +541,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (i = 0; i < public.allPoints; i++) {
-    private[i].d_mask_conv = omp_target_alloc(public.mask_conv_mem, device_id);
+    point_priv[i].d_mask_conv = omp_target_alloc(public.mask_conv_mem, device_id);
   }
 
   //======================================================================================================================================================
@@ -577,14 +577,14 @@ int main(int argc, char *argv[]) {
     //====================================================================================================
     //	PROCESSING
     //====================================================================================================
-#pragma omp target data map(to : public, private [0:ALL_POINTS])
+#pragma omp target data map(to : public, point_priv [0:ALL_POINTS])
     {
 #pragma omp target teams distribute parallel for map(to                        \
                                                      : public,                 \
-                                                       private [0:ALL_POINTS]) \
+                                                       point_priv [0:ALL_POINTS]) \
 
       for (i = 0; i < public.allPoints; i++) {
-        kernel(public, private[i]);
+        kernel(public, point_priv[i]);
       }
     }
     //====================================================================================================
@@ -668,27 +668,27 @@ int main(int argc, char *argv[]) {
   //====================================================================================================
 
   for (i = 0; i < public.allPoints; i++) {
-    omp_target_free(private[i].in_partial_sum, device_id);
-    omp_target_free(private[i].in_sqr_partial_sum, device_id);
-    omp_target_free(private[i].par_max_val, device_id);
-    omp_target_free(private[i].par_max_coo, device_id);
+    omp_target_free(point_priv[i].in_partial_sum, device_id);
+    omp_target_free(point_priv[i].in_sqr_partial_sum, device_id);
+    omp_target_free(point_priv[i].par_max_val, device_id);
+    omp_target_free(point_priv[i].par_max_coo, device_id);
 
-    omp_target_free(private[i].d_in2, device_id);
-    omp_target_free(private[i].d_in2_sqr, device_id);
+    omp_target_free(point_priv[i].d_in2, device_id);
+    omp_target_free(point_priv[i].d_in2_sqr, device_id);
 
-    omp_target_free(private[i].d_in_mod, device_id);
-    omp_target_free(private[i].d_in_sqr, device_id);
+    omp_target_free(point_priv[i].d_in_mod, device_id);
+    omp_target_free(point_priv[i].d_in_sqr, device_id);
 
-    omp_target_free(private[i].d_conv, device_id);
+    omp_target_free(point_priv[i].d_conv, device_id);
 
-    omp_target_free(private[i].d_in2_pad, device_id);
+    omp_target_free(point_priv[i].d_in2_pad, device_id);
 
-    omp_target_free(private[i].d_in2_sub, device_id);
+    omp_target_free(point_priv[i].d_in2_sub, device_id);
 
-    omp_target_free(private[i].d_in2_sub2_sqr, device_id);
+    omp_target_free(point_priv[i].d_in2_sub2_sqr, device_id);
 
-    omp_target_free(private[i].d_tMask, device_id);
-    omp_target_free(private[i].d_mask_conv, device_id);
+    omp_target_free(point_priv[i].d_tMask, device_id);
+    omp_target_free(point_priv[i].d_mask_conv, device_id);
   }
 }
 

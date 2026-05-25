@@ -115,9 +115,8 @@ void nw_optimized(int *input_itemsets, int *output_itemsets, int *referrence,
     map(input_itemsets [0:transfer_size])
   {
 
-#pragma omp target teams distribute
     for (int blk = 1; blk <= (max_cols - 1) / BLOCK_SIZE; blk++) {
-#pragma omp parallel for schedule(static) shared(input_itemsets, referrence)   \
+#pragma omp target teams distribute parallel for                              \
     firstprivate(blk, max_rows, max_cols, penalty)
       for (int b_index_x = 0; b_index_x < blk; ++b_index_x) {
         int b_index_y = blk - 1 - b_index_x;
@@ -170,9 +169,8 @@ void nw_optimized(int *input_itemsets, int *output_itemsets, int *referrence,
 
     printf("Processing bottom-right matrix\n");
 
-#pragma omp target teams distribute
     for (int blk = 2; blk <= (max_cols - 1) / BLOCK_SIZE; blk++) {
-#pragma omp parallel for schedule(static) shared(input_itemsets, referrence)   \
+#pragma omp target teams distribute parallel for                              \
     firstprivate(blk, max_rows, max_cols, penalty)
       for (int b_index_x = blk - 1; b_index_x < (max_cols - 1) / BLOCK_SIZE;
            ++b_index_x) {

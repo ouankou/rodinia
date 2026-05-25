@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 using namespace std;
 #define STR_SIZE 256
@@ -31,11 +32,7 @@ void single_iteration(double *result, double *temp, double *power, int row,
   int r, c;
 
 #pragma omp target teams distribute parallel for collapse(2)                   \
-    map(from                                                                   \
-        : result [0:row * col]) map(to                                         \
-                                    : power [0:row * col])                     \
-        map(tofrom                                                             \
-            : temp [0:row * col])
+    firstprivate(row, col, Cap, Rx, Ry, Rz, step)
   for (r = 0; r < row; r++)
     for (c = 0; c < col; c++) {
       /*	Corner 1	*/
@@ -109,16 +106,6 @@ void single_iteration(double *result, double *temp, double *power, int row,
       /*	Update Temperatures	*/
       result[r * col + c] = temp[r * col + c] + delta;
     }
-
-#pragma omp target teams distribute parallel for collapse(2)                   \
-    map(from                                                                   \
-        : result [0:row * col]) map(tofrom                                     \
-                                    : temp [0:row * col])
-  for (r = 0; r < row; r++) {
-    for (c = 0; c < col; c++) {
-      temp[r * col + c] = result[r * col + c];
-    }
-  }
 }
 
 /* Transient solver driver routine: simply converts the heat
@@ -148,17 +135,27 @@ void compute_tran_temp(double *result, int num_iterations, double *temp,
   fprintf(stdout, "Rx: %g\tRy: %g\tRz: %g\tCap: %g\n", Rx, Ry, Rz, Cap);
 #endif
 
-#pragma omp target data map(from                                               \
-                            : result [0:row * col]) map(to                     \
-                                                        : power [0:row * col]) \
-    map(tofrom                                                                 \
-        : temp [0:row * col])
+  const int size = row * col;
+  double *src = temp;
+  double *dst = result;
+#pragma omp target data map(to : power [0:size]) map(tofrom : temp [0:size])   \
+    map(alloc : result [0:size])
   {
     for (int i = 0; i < num_iterations; i++) {
 #ifdef VERBOSE
       fprintf(stdout, "iteration %d\n", i++);
 #endif
-      single_iteration(result, temp, power, row, col, Cap, Rx, Ry, Rz, step);
+      single_iteration(dst, src, power, row, col, Cap, Rx, Ry, Rz, step);
+      double *swap = src;
+      src = dst;
+      dst = swap;
+    }
+
+    if (src == result) {
+#pragma omp target update from(result [0:size])
+    } else {
+#pragma omp target update from(temp [0:size])
+      memcpy(result, temp, size * sizeof(double));
     }
   } /* end pragma target data */
 
@@ -170,6 +167,21 @@ void compute_tran_temp(double *result, int num_iterations, double *temp,
 void fatal(const char *s) {
   fprintf(stderr, "error: %s\n", s);
   exit(1);
+}
+
+void writeoutput(double *vect, int grid_rows, int grid_cols, const char *file) {
+  FILE *fp = fopen(file, "w");
+  if (!fp)
+    fatal("file could not be opened for writing");
+
+  for (int i = 0; i < grid_rows; i++) {
+    for (int j = 0; j < grid_cols; j++) {
+      int index = i * grid_cols + j;
+      fprintf(fp, "%d\t%g\n", index, vect[index]);
+    }
+  }
+
+  fclose(fp);
 }
 
 void read_input(double *vect, int grid_rows, int grid_cols, char *file) {
@@ -197,7 +209,8 @@ void read_input(double *vect, int grid_rows, int grid_cols, char *file) {
 void usage(int argc, char **argv) {
   fprintf(
       stderr,
-      "Usage: %s <grid_rows> <grid_cols> <sim_time> <temp_file> <power_file>\n",
+      "Usage: %s <grid_rows> <grid_cols> <sim_time> <temp_file> <power_file> "
+      "[output_file]\n",
       argv[0]);
   fprintf(stderr,
           "\t<grid_rows>  - number of rows in the grid (positive integer)\n");
@@ -209,6 +222,8 @@ void usage(int argc, char **argv) {
                   "temperature values of each cell\n");
   fprintf(stderr, "\t<power_file> - name of the file containing the dissipated "
                   "power values of each cell\n");
+  fprintf(stderr, "\t[output_file] - optional output file for final "
+                  "temperatures\n");
   exit(1);
 }
 
@@ -218,7 +233,7 @@ int main(int argc, char **argv) {
   char *tfile, *pfile;
 
   /* check validity of inputs	*/
-  if (argc != 6)
+  if (argc != 6 && argc != 7)
     usage(argc, argv);
   if ((grid_rows = atoi(argv[1])) <= 0 || (grid_cols = atoi(argv[2])) <= 0 ||
       (sim_time = atoi(argv[3])) <= 0)
@@ -228,7 +243,7 @@ int main(int argc, char **argv) {
   temp = (double *)calloc(grid_rows * grid_cols, sizeof(double));
   power = (double *)calloc(grid_rows * grid_cols, sizeof(double));
   result = (double *)calloc(grid_rows * grid_cols, sizeof(double));
-  if (!temp || !power)
+  if (!temp || !power || !result)
     fatal("unable to allocate memory");
 
   /* read initial temperatures and input power	*/
@@ -240,6 +255,10 @@ int main(int argc, char **argv) {
   printf("Start computing the transient temperature\n");
   compute_tran_temp(result, sim_time, temp, power, grid_rows, grid_cols);
   printf("Ending simulation\n");
+
+  if (argc == 7)
+    writeoutput(result, grid_rows, grid_cols, argv[6]);
+
   /* output results	*/
 #ifdef VERBOSE
   fprintf(stdout, "Final Temperatures:\n");
@@ -247,11 +266,12 @@ int main(int argc, char **argv) {
 
 #ifdef OUTPUT
   for (i = 0; i < grid_rows * grid_cols; i++)
-    fprintf(stdout, "%d\t%g\n", i, temp[i]);
+    fprintf(stdout, "%d\t%g\n", i, result[i]);
 #endif
   /* cleanup	*/
   free(temp);
   free(power);
+  free(result);
 
   return 0;
 }

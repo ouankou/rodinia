@@ -4,7 +4,7 @@
 //===============================================================================================================================================================================================================
 //===============================================================================================================================================================================================================
 
-void kernel(public_struct public, private_struct private) {
+void kernel(public_struct public, private_struct point_priv) {
 
   //======================================================================================================================================================
   //	COMMON VARIABLES
@@ -62,12 +62,12 @@ void kernel(public_struct public, private_struct private) {
   if (public.frame_no == 0) {
 
     // update temporary row/col coordinates
-    pointer = private.point_no * public.frames + public.frame_no;
-    private.d_tRowLoc[pointer] = private.d_Row[private.point_no];
-    private.d_tColLoc[pointer] = private.d_Col[private.point_no];
+    pointer = point_priv.point_no * public.frames + public.frame_no;
+    point_priv.d_tRowLoc[pointer] = point_priv.d_Row[point_priv.point_no];
+    point_priv.d_tColLoc[pointer] = point_priv.d_Col[point_priv.point_no];
 
     // pointers to: current frame, template for current point
-    d_in = &private.d_T[private.in_pointer];
+    d_in = &point_priv.d_T[point_priv.in_pointer];
 
     // update template, limit the number of working threads to the size of
     // template
@@ -77,8 +77,8 @@ void kernel(public_struct public, private_struct private) {
         // figure out row/col location in corresponding new template area in
         // image and give to every thread (get top left corner and progress down
         // and right)
-        ori_row = private.d_Row[private.point_no] - 25 + row - 1;
-        ori_col = private.d_Col[private.point_no] - 25 + col - 1;
+        ori_row = point_priv.d_Row[point_priv.point_no] - 25 + row - 1;
+        ori_col = point_priv.d_Col[point_priv.point_no] - 25 + col - 1;
         ori_pointer = ori_col * public.frame_rows + ori_row;
 
         // update template
@@ -109,8 +109,8 @@ void kernel(public_struct public, private_struct private) {
     //==================================================
 
     // pointers and variables
-    in2_rowlow = private.d_Row[private.point_no] - public.sSize; // (1 to n+1)
-    in2_collow = private.d_Col[private.point_no] - public.sSize;
+    in2_rowlow = point_priv.d_Row[point_priv.point_no] - public.sSize; // (1 to n+1)
+    in2_collow = point_priv.d_Col[point_priv.point_no] - public.sSize;
 
     // work
     for (col = 0; col < public.in2_cols; col++) {
@@ -121,8 +121,8 @@ void kernel(public_struct public, private_struct private) {
         ori_row = row + in2_rowlow - 1;
         ori_col = col + in2_collow - 1;
         temp = public.d_frame[ori_col * public.frame_rows + ori_row];
-        private.d_in2[col * public.in2_rows + row] = temp;
-        private.d_in2_sqr[col * public.in2_rows + row] = temp * temp;
+        point_priv.d_in2[col * public.in2_rows + row] = temp;
+        point_priv.d_in2_sqr[col * public.in2_rows + row] = temp * temp;
       }
     }
 
@@ -135,7 +135,7 @@ void kernel(public_struct public, private_struct private) {
     //==================================================
 
     // variables
-    d_in = &private.d_T[private.in_pointer];
+    d_in = &point_priv.d_T[point_priv.in_pointer];
 
     // work
     for (col = 0; col < public.in_mod_cols; col++) {
@@ -148,8 +148,8 @@ void kernel(public_struct public, private_struct private) {
 
         // execution
         temp = d_in[pointer];
-        private.d_in_mod[col * public.in_mod_rows + row] = temp;
-        private.d_in_sqr[pointer] = temp * temp;
+        point_priv.d_in_mod[col * public.in_mod_rows + row] = temp;
+        point_priv.d_in_sqr[pointer] = temp * temp;
       }
     }
 
@@ -165,7 +165,7 @@ void kernel(public_struct public, private_struct private) {
 
     in_sqr_final_sum = 0;
     for (i = 0; i < public.in_mod_elem; i++) {
-      in_sqr_final_sum = in_sqr_final_sum + private.d_in_sqr[i];
+      in_sqr_final_sum = in_sqr_final_sum + point_priv.d_in_sqr[i];
     }
 
     //==================================================
@@ -228,12 +228,12 @@ void kernel(public_struct public, private_struct private) {
           jb = jp1 - ja;
           for (ia = ia1; ia <= ia2; ia++) {
             ib = ip1 - ia;
-            s = s + private.d_in_mod[public.in_mod_rows * (ja - 1) + ia - 1] *
-                        private.d_in2[public.in2_rows * (jb - 1) + ib - 1];
+            s = s + point_priv.d_in_mod[public.in_mod_rows * (ja - 1) + ia - 1] *
+                        point_priv.d_in2[public.in2_rows * (jb - 1) + ib - 1];
           }
         }
 
-        private.d_conv[(col - 1) * public.conv_rows + (row - 1)] = s;
+        point_priv.d_conv[(col - 1) * public.conv_rows + (row - 1)] = s;
       }
     }
     //====================================================================================================
@@ -257,10 +257,10 @@ void kernel(public_struct public, private_struct private) {
             col < (public.in2_pad_add_cols + public.in2_cols)) {
           ori_row = row - public.in2_pad_add_rows;
           ori_col = col - public.in2_pad_add_cols;
-          private.d_in2_pad[col * public.in2_pad_rows + row] =
-              private.d_in2[ori_col * public.in2_rows + ori_row];
+          point_priv.d_in2_pad[col * public.in2_pad_rows + row] =
+              point_priv.d_in2[ori_col * public.in2_rows + ori_row];
         } else { // do if otherwise
-          private.d_in2_pad[col * public.in2_pad_rows + row] = 0;
+          point_priv.d_in2_pad[col * public.in2_pad_rows + row] = 0;
         }
       }
     }
@@ -278,8 +278,8 @@ void kernel(public_struct public, private_struct private) {
       sum = 0;
       for (position = pos_ori; position < pos_ori + public.in2_pad_rows;
            position = position + 1) {
-        private.d_in2_pad[position] = private.d_in2_pad[position] + sum;
-        sum = private.d_in2_pad[position];
+        point_priv.d_in2_pad[position] = point_priv.d_in2_pad[position] + sum;
+        sum = point_priv.d_in2_pad[position];
       }
     }
 
@@ -297,16 +297,16 @@ void kernel(public_struct public, private_struct private) {
         // new matrix
         ori_row = row + public.in2_pad_cumv_sel_rowlow - 1;
         ori_col = col + public.in2_pad_cumv_sel_collow - 1;
-        temp = private.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
+        temp = point_priv.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
 
         // figure out corresponding location in old matrix and copy values to
         // new matrix
         ori_row = row + public.in2_pad_cumv_sel2_rowlow - 1;
         ori_col = col + public.in2_pad_cumv_sel2_collow - 1;
-        temp2 = private.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
+        temp2 = point_priv.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
 
         // subtraction
-        private.d_in2_sub[col * public.in2_sub_rows + row] = temp - temp2;
+        point_priv.d_in2_sub[col * public.in2_sub_rows + row] = temp - temp2;
       }
     }
 
@@ -324,8 +324,8 @@ void kernel(public_struct public, private_struct private) {
       sum = 0;
       for (position = pos_ori; position < pos_ori + public.in2_sub_elem;
            position = position + public.in2_sub_rows) {
-        private.d_in2_sub[position] = private.d_in2_sub[position] + sum;
-        sum = private.d_in2_sub[position];
+        point_priv.d_in2_sub[position] = point_priv.d_in2_sub[position] + sum;
+        sum = point_priv.d_in2_sub[position];
       }
     }
 
@@ -345,24 +345,24 @@ void kernel(public_struct public, private_struct private) {
         // new matrix
         ori_row = row + public.in2_sub_cumh_sel_rowlow - 1;
         ori_col = col + public.in2_sub_cumh_sel_collow - 1;
-        temp = private.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
+        temp = point_priv.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
 
         // figure out corresponding location in old matrix and copy values to
         // new matrix
         ori_row = row + public.in2_sub_cumh_sel2_rowlow - 1;
         ori_col = col + public.in2_sub_cumh_sel2_collow - 1;
-        temp2 = private.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
+        temp2 = point_priv.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
 
         // subtraction
         temp2 = temp - temp2;
 
         // squaring
-        private.d_in2_sub2_sqr[col * public.in2_sub2_sqr_rows + row] =
+        point_priv.d_in2_sub2_sqr[col * public.in2_sub2_sqr_rows + row] =
             temp2 * temp2;
 
         // numerator
-        private.d_conv[col * public.in2_sub2_sqr_rows + row] =
-            private.d_conv[col * public.in2_sub2_sqr_rows + row] -
+        point_priv.d_conv[col * public.in2_sub2_sqr_rows + row] =
+            point_priv.d_conv[col * public.in2_sub2_sqr_rows + row] -
             temp2 * in_final_sum / public.in_mod_elem;
       }
     }
@@ -388,10 +388,10 @@ void kernel(public_struct public, private_struct private) {
             col < (public.in2_pad_add_cols + public.in2_cols)) {
           ori_row = row - public.in2_pad_add_rows;
           ori_col = col - public.in2_pad_add_cols;
-          private.d_in2_pad[col * public.in2_pad_rows + row] =
-              private.d_in2_sqr[ori_col * public.in2_rows + ori_row];
+          point_priv.d_in2_pad[col * public.in2_pad_rows + row] =
+              point_priv.d_in2_sqr[ori_col * public.in2_rows + ori_row];
         } else { // do if otherwise
-          private.d_in2_pad[col * public.in2_pad_rows + row] = 0;
+          point_priv.d_in2_pad[col * public.in2_pad_rows + row] = 0;
         }
       }
     }
@@ -410,8 +410,8 @@ void kernel(public_struct public, private_struct private) {
       sum = 0;
       for (position = pos_ori; position < pos_ori + public.in2_pad_rows;
            position = position + 1) {
-        private.d_in2_pad[position] = private.d_in2_pad[position] + sum;
-        sum = private.d_in2_pad[position];
+        point_priv.d_in2_pad[position] = point_priv.d_in2_pad[position] + sum;
+        sum = point_priv.d_in2_pad[position];
       }
     }
 
@@ -429,16 +429,16 @@ void kernel(public_struct public, private_struct private) {
         // new matrix
         ori_row = row + public.in2_pad_cumv_sel_rowlow - 1;
         ori_col = col + public.in2_pad_cumv_sel_collow - 1;
-        temp = private.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
+        temp = point_priv.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
 
         // figure out corresponding location in old matrix and copy values to
         // new matrix
         ori_row = row + public.in2_pad_cumv_sel2_rowlow - 1;
         ori_col = col + public.in2_pad_cumv_sel2_collow - 1;
-        temp2 = private.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
+        temp2 = point_priv.d_in2_pad[ori_col * public.in2_pad_rows + ori_row];
 
         // subtract
-        private.d_in2_sub[col * public.in2_sub_rows + row] = temp - temp2;
+        point_priv.d_in2_sub[col * public.in2_sub_rows + row] = temp - temp2;
       }
     }
 
@@ -456,8 +456,8 @@ void kernel(public_struct public, private_struct private) {
       sum = 0;
       for (position = pos_ori; position < pos_ori + public.in2_sub_elem;
            position = position + public.in2_sub_rows) {
-        private.d_in2_sub[position] = private.d_in2_sub[position] + sum;
-        sum = private.d_in2_sub[position];
+        point_priv.d_in2_sub[position] = point_priv.d_in2_sub[position] + sum;
+        sum = point_priv.d_in2_sub[position];
       }
     }
 
@@ -479,19 +479,19 @@ void kernel(public_struct public, private_struct private) {
         // new matrix
         ori_row = row + public.in2_sub_cumh_sel_rowlow - 1;
         ori_col = col + public.in2_sub_cumh_sel_collow - 1;
-        temp = private.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
+        temp = point_priv.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
 
         // figure out corresponding location in old matrix and copy values to
         // new matrix
         ori_row = row + public.in2_sub_cumh_sel2_rowlow - 1;
         ori_col = col + public.in2_sub_cumh_sel2_collow - 1;
-        temp2 = private.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
+        temp2 = point_priv.d_in2_sub[ori_col * public.in2_sub_rows + ori_row];
 
         // subtract
         temp2 = temp - temp2;
 
         // diff_local_sums
-        temp2 = temp2 - (private.d_in2_sub2_sqr[col * public.conv_rows + row] /
+        temp2 = temp2 - (point_priv.d_in2_sub2_sqr[col * public.conv_rows + row] /
                          public.in_mod_elem);
 
         // denominator A
@@ -504,8 +504,8 @@ void kernel(public_struct public, private_struct private) {
         temp2 = denomT * temp2;
 
         // correlation
-        private.d_conv[col * public.conv_rows + row] =
-            private.d_conv[col * public.conv_rows + row] / temp2;
+        point_priv.d_conv[col * public.conv_rows + row] =
+            point_priv.d_conv[col * public.conv_rows + row] / temp2;
       }
     }
 
@@ -515,17 +515,17 @@ void kernel(public_struct public, private_struct private) {
 
     // parameters
     cent = public.sSize + public.tSize + 1;
-    pointer = public.frame_no - 1 + private.point_no * public.frames;
+    pointer = public.frame_no - 1 + point_priv.point_no * public.frames;
     tMask_row =
-        cent + private.d_tRowLoc[pointer] - private.d_Row[private.point_no] - 1;
+        cent + point_priv.d_tRowLoc[pointer] - point_priv.d_Row[point_priv.point_no] - 1;
     tMask_col =
-        cent + private.d_tColLoc[pointer] - private.d_Col[private.point_no] - 1;
+        cent + point_priv.d_tColLoc[pointer] - point_priv.d_Col[point_priv.point_no] - 1;
 
     // work
     for (ei_new = 0; ei_new < public.tMask_elem; ei_new++) {
-      private.d_tMask[ei_new] = 0;
+      point_priv.d_tMask[ei_new] = 0;
     }
-    private.d_tMask[tMask_col * public.tMask_rows + tMask_row] = 1;
+    point_priv.d_tMask[tMask_col * public.tMask_rows + tMask_row] = 1;
 
     //====================================================================================================
     //	1) MASK CONVOLUTION
@@ -575,12 +575,12 @@ void kernel(public_struct public, private_struct private) {
           jb = jp1 - ja;
           for (ia = ia1; ia <= ia2; ia++) {
             ib = ip1 - ia;
-            s = s + private.d_tMask[public.tMask_rows * (ja - 1) + ia - 1] * 1;
+            s = s + point_priv.d_tMask[public.tMask_rows * (ja - 1) + ia - 1] * 1;
           }
         }
 
-        private.d_mask_conv[(col - 1) * public.conv_rows + (row - 1)] =
-            private.d_conv[(col - 1) * public.conv_rows + (row - 1)] * s;
+        point_priv.d_mask_conv[(col - 1) * public.conv_rows + (row - 1)] =
+            point_priv.d_conv[(col - 1) * public.conv_rows + (row - 1)] * s;
       }
     }
 
@@ -595,8 +595,8 @@ void kernel(public_struct public, private_struct private) {
     fin_max_val = 0;
     fin_max_coo = 0;
     for (i = 0; i < public.mask_conv_elem; i++) {
-      if (private.d_mask_conv[i] > fin_max_val) {
-        fin_max_val = private.d_mask_conv[i];
+      if (point_priv.d_mask_conv[i] > fin_max_val) {
+        fin_max_val = point_priv.d_mask_conv[i];
         fin_max_coo = i;
       }
     }
@@ -620,9 +620,9 @@ void kernel(public_struct public, private_struct private) {
         largest_row - public.in_mod_rows - (public.sSize - public.tSize);
     offset_col =
         largest_col - public.in_mod_cols - (public.sSize - public.tSize);
-    pointer = private.point_no * public.frames + public.frame_no;
-    private.d_tRowLoc[pointer] = private.d_Row[private.point_no] + offset_row;
-    private.d_tColLoc[pointer] = private.d_Col[private.point_no] + offset_col;
+    pointer = point_priv.point_no * public.frames + public.frame_no;
+    point_priv.d_tRowLoc[pointer] = point_priv.d_Row[point_priv.point_no] + offset_row;
+    point_priv.d_tColLoc[pointer] = point_priv.d_Col[point_priv.point_no] + offset_col;
   }
 
   //======================================================================================================================================================
@@ -633,9 +633,9 @@ void kernel(public_struct public, private_struct private) {
   if (public.frame_no != 0 && (public.frame_no) % 10 == 0) {
 
     // update coordinate
-    loc_pointer = private.point_no * public.frames + public.frame_no;
-    private.d_Row[private.point_no] = private.d_tRowLoc[loc_pointer];
-    private.d_Col[private.point_no] = private.d_tColLoc[loc_pointer];
+    loc_pointer = point_priv.point_no * public.frames + public.frame_no;
+    point_priv.d_Row[point_priv.point_no] = point_priv.d_tRowLoc[loc_pointer];
+    point_priv.d_Col[point_priv.point_no] = point_priv.d_tColLoc[loc_pointer];
 
     // update template, limit the number of working threads to the size of
     // template
@@ -645,8 +645,8 @@ void kernel(public_struct public, private_struct private) {
         // figure out row/col location in corresponding new template area in
         // image and give to every thread (get top left corner and progress down
         // and right)
-        ori_row = private.d_Row[private.point_no] - 25 + row - 1;
-        ori_col = private.d_Col[private.point_no] - 25 + col - 1;
+        ori_row = point_priv.d_Row[point_priv.point_no] - 25 + row - 1;
+        ori_col = point_priv.d_Col[point_priv.point_no] - 25 + col - 1;
         ori_pointer = ori_col * public.frame_rows + ori_row;
 
         // update template

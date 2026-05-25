@@ -143,7 +143,8 @@ fi
 
 if should_run hotspot; then
   require_bin hotspot
-  run_cmd hotspot "${BIN_DIR}/hotspot 512 512 2 ${DATA_DIR}/hotspot/temp_512 ${DATA_DIR}/hotspot/power_512"
+  run_cmd hotspot \
+    "${BIN_DIR}/hotspot 512 512 2 ${DATA_DIR}/hotspot/temp_512 ${DATA_DIR}/hotspot/power_512 \${RODINIA_BENCH_OUTPUT_DIR}/hotspot.out"
 fi
 
 if should_run hotspot3d; then
