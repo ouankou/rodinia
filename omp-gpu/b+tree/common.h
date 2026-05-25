@@ -15,6 +15,7 @@
 
 #include <stdint.h>					// (in path known to compiler)			needed by uint32_t
 #include <stdbool.h>				// (in path known to compiler)			needed by true/false, bool
+#include <stdio.h>					// (in path known to compiler)			needed by fprintf
 #include <stdlib.h>					// (in path known to compiler)			needed by malloc
 
 //======================================================================================================================================================150
@@ -33,16 +34,15 @@
 
 #define DEFAULT_ORDER 508
 
-#define malloc(size) ({                                                   \
-  void *_tmp;                                                             \
-                                                                          \
-  if (!(_tmp = malloc(size))) {                                           \
-    fprintf(stderr, "Allocation failed at %s:%d!\n", __FILE__, __LINE__); \
-    exit(-1);                                                             \
-  }                                                                       \
-                                                                          \
-  _tmp;                                                                   \
-})
+static inline void *checked_malloc(size_t size)
+{
+	void *ptr = malloc(size);
+	if (!ptr) {
+		fprintf(stderr, "Allocation failed!\n");
+		exit(-1);
+	}
+	return ptr;
+}
 
 //======================================================================================================================================================150
 //	STRUCTURES

@@ -112,6 +112,21 @@ __inline float euclid_dist_2(float *pt1, float *pt2, int numdims) {
 
   return (ans);
 }
+
+static int find_nearest_point_flat(float *pt, int nfeatures, float *pts,
+                                   int npts) {
+  int index = 0;
+  float min_dist = FLT_MAX;
+
+  for (int i = 0; i < npts; i++) {
+    float dist = euclid_dist_2(pt, pts + i * nfeatures, nfeatures);
+    if (dist < min_dist) {
+      min_dist = dist;
+      index = i;
+    }
+  }
+  return index;
+}
 #pragma omp end declare target
 
 /*----< kmeans_clustering() >---------------------------------------------*/
@@ -120,21 +135,25 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
                           float threshold, int *membership) /* out: [npoints] */
 {
 
-  int i, j, n = 0, index, loop = 0;
+  int i, j, n = 0, loop = 0;
   int *new_centers_len;  /* [nclusters]: no. of points in each cluster */
-  float **h_new_centers; /* [nclusters][nfeatures] */
   float **h_clusters;    /* out: [nclusters][nfeatures] */
+  float *feature;
+  float *clusters;
+  float *new_centers;
+  float *partial_centers;
+  int *partial_centers_len;
   float delta;
+  const int center_size = nclusters * nfeatures;
+  const int feature_size = npoints * nfeatures;
+  int num_chunks = center_size;
+  if (num_chunks > npoints)
+    num_chunks = npoints;
 
-  int host_id = omp_get_initial_device();
-  int device_id = omp_get_default_device();
-
-  float **feature = malloc(npoints * sizeof(float *));
-  for (i = 0; i < npoints; i++) {
-    feature[i] = omp_target_alloc(nfeatures * sizeof(float), device_id);
-    omp_target_memcpy(feature[i], h_feature[i], nfeatures * sizeof(float), 0, 0,
-                      device_id, host_id);
-  }
+  feature = (float *)malloc(feature_size * sizeof(float));
+  for (i = 0; i < npoints; i++)
+    for (j = 0; j < nfeatures; j++)
+      feature[i * nfeatures + j] = h_feature[i][j];
 
   /* allocate space for returning variable clusters[] */
   h_clusters = (float **)malloc(nclusters * sizeof(float *));
@@ -150,86 +169,122 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
     n++;
   }
 
-  float **clusters = malloc(nclusters * sizeof(float *));
-  for (i = 0; i < nclusters; i++) {
-    clusters[i] = omp_target_alloc(nfeatures * sizeof(float), device_id);
-    omp_target_memcpy(clusters[i], h_clusters[i], nfeatures * sizeof(float), 0,
-                      0, device_id, host_id);
-  }
+  clusters = (float *)malloc(center_size * sizeof(float));
+  for (i = 0; i < nclusters; i++)
+    for (j = 0; j < nfeatures; j++)
+      clusters[i * nfeatures + j] = h_clusters[i][j];
 
   for (i = 0; i < npoints; i++)
     membership[i] = -1;
 
   /* need to initialize new_centers_len and new_centers[0] to all 0 */
   new_centers_len = (int *)calloc(nclusters, sizeof(int));
-
-  h_new_centers = (float **)malloc(nclusters * sizeof(float *));
-  h_new_centers[0] = (float *)calloc(nclusters * nfeatures, sizeof(float));
-  for (i = 1; i < nclusters; i++)
-    h_new_centers[i] = h_new_centers[i - 1] + nfeatures;
-
-  float **new_centers = malloc(nclusters * sizeof(float *));
-  for (i = 0; i < nclusters; i++) {
-    new_centers[i] = omp_target_alloc(nfeatures * sizeof(float), device_id);
-    omp_target_memcpy(new_centers[i], h_new_centers[i],
-                      nfeatures * sizeof(float), 0, 0, device_id, host_id);
-  }
+  new_centers = (float *)calloc(center_size, sizeof(float));
+  partial_centers_len =
+      (int *)calloc(num_chunks * nclusters, sizeof(int));
+  partial_centers =
+      (float *)calloc(num_chunks * center_size, sizeof(float));
 
 #pragma omp target data map(to                                                 \
-                            : feature [0:npoints], membership [0:npoints],     \
-                              new_centers [0:nclusters],                       \
-                              new_centers_len [0:nclusters])                   \
-    map(to : clusters [0:nclusters])
+                            : feature [0:feature_size], membership [0:npoints])\
+    map(tofrom : clusters [0:center_size])                                     \
+    map(alloc                                                                 \
+        : new_centers [0:center_size], new_centers_len [0:nclusters],          \
+          partial_centers [0:num_chunks * center_size],                        \
+          partial_centers_len [0:num_chunks * nclusters])
   {
     do {
       delta = 0.0;
-#pragma omp target parallel for private(j, index)                              \
+
+#pragma omp target teams distribute parallel for private(j)                    \
     firstprivate(npoints, nclusters, nfeatures) reduction(+ : delta)
       for (i = 0; i < npoints; i++) {
         /* find the index of nestest cluster centers */
-        index = find_nearest_point(feature[i], nfeatures, clusters, nclusters);
+        int index = find_nearest_point_flat(feature + i * nfeatures, nfeatures,
+                                            clusters, nclusters);
         /* if membership changes, increase delta by 1 */
         if (membership[i] != index)
           delta += 1.0;
 
         /* assign the membership to object i */
         membership[i] = index;
+      }
 
-        /* update new cluster centers : sum of all objects located
-               within */
-        #pragma omp atomic update
-        new_centers_len[index]++;
+#pragma omp target teams distribute parallel for collapse(2)                  \
+    firstprivate(npoints, nclusters, num_chunks)
+      for (int chunk = 0; chunk < num_chunks; chunk++) {
+        for (int cluster = 0; cluster < nclusters; cluster++) {
+          int start = (int)(((long long)chunk * npoints) / num_chunks);
+          int end = (int)(((long long)(chunk + 1) * npoints) / num_chunks);
+          int count = 0;
+          for (int point = start; point < end; point++) {
+            if (membership[point] == cluster)
+              count++;
+          }
+          partial_centers_len[chunk * nclusters + cluster] = count;
+        }
+      }
+
+#pragma omp target teams distribute parallel for collapse(3)                  \
+    firstprivate(npoints, nclusters, nfeatures, num_chunks, center_size)
+      for (int chunk = 0; chunk < num_chunks; chunk++) {
+        for (int cluster = 0; cluster < nclusters; cluster++) {
+          for (int feature_idx = 0; feature_idx < nfeatures; feature_idx++) {
+            int start = (int)(((long long)chunk * npoints) / num_chunks);
+            int end = (int)(((long long)(chunk + 1) * npoints) / num_chunks);
+            float sum = 0.0f;
+            for (int point = start; point < end; point++) {
+              if (membership[point] == cluster)
+                sum += feature[point * nfeatures + feature_idx];
+            }
+            partial_centers[chunk * center_size + cluster * nfeatures +
+                            feature_idx] = sum;
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for                              \
+    firstprivate(nclusters, num_chunks)
+      for (i = 0; i < nclusters; i++) {
+        int count = 0;
+        for (int chunk = 0; chunk < num_chunks; chunk++)
+          count += partial_centers_len[chunk * nclusters + i];
+        new_centers_len[i] = count;
+      }
+
+#pragma omp target teams distribute parallel for collapse(2)                  \
+    firstprivate(nclusters, nfeatures, num_chunks, center_size)
+      for (i = 0; i < nclusters; i++) {
         for (j = 0; j < nfeatures; j++) {
-          #pragma omp atomic update
-          new_centers[index][j] += feature[i][j];
+          float sum = 0.0f;
+          for (int chunk = 0; chunk < num_chunks; chunk++)
+            sum += partial_centers[chunk * center_size + i * nfeatures + j];
+          new_centers[i * nfeatures + j] = sum;
         }
       }
 
       /* replace old cluster centers with new_centers */
-#pragma omp target parallel for
+#pragma omp target teams distribute parallel for collapse(2)                  \
+    firstprivate(nclusters, nfeatures)
       for (i = 0; i < nclusters; i++) {
         for (j = 0; j < nfeatures; j++) {
           if (new_centers_len[i] > 0)
-            clusters[i][j] = new_centers[i][j] / new_centers_len[i];
-          new_centers[i][j] = 0.0; /* set back to 0 */
+            clusters[i * nfeatures + j] =
+                new_centers[i * nfeatures + j] / new_centers_len[i];
         }
-        new_centers_len[i] = 0; /* set back to 0 */
       }
     } while (delta > threshold && loop++ < 500);
   }
 
-  for (i = 0; i < nclusters; i++) {
-    omp_target_memcpy(h_clusters[i], clusters[i], nfeatures * sizeof(float), 0,
-                      0, host_id, device_id);
-    omp_target_free(clusters[i], device_id);
-  }
+  for (i = 0; i < nclusters; i++)
+    for (j = 0; j < nfeatures; j++)
+      h_clusters[i][j] = clusters[i * nfeatures + j];
 
-  for (i = 0; i < npoints; i++) {
-    omp_target_free(feature[i], device_id);
-  }
-
-  free(h_new_centers[0]);
-  free(h_new_centers);
+  free(feature);
+  free(clusters);
+  free(new_centers);
+  free(partial_centers);
+  free(partial_centers_len);
   free(new_centers_len);
 
   return h_clusters;

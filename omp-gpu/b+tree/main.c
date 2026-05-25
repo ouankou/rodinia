@@ -254,7 +254,7 @@ void list_insert_item_sorted(list_t *l, list_item_t *i) {
 
 void list_insert_head(list_t *l, void *v) {
   list_item_t *i;
-  i = (list_item_t *)malloc(sizeof(*i));
+  i = (list_item_t *)checked_malloc(sizeof(*i));
   list_item_init(i, v);
   if (l->head) {
     i->next = l->head;
@@ -271,7 +271,7 @@ void list_insert_head(list_t *l, void *v) {
 void list_insert_tail(list_t *l, void *v) {
   list_item_t *i;
 
-  i = (list_item_t *)malloc(sizeof(*i));
+  i = (list_item_t *)checked_malloc(sizeof(*i));
   list_item_init(i, v);
   if (l->head) {
     l->tail->next = i;
@@ -288,7 +288,7 @@ void list_insert_tail(list_t *l, void *v) {
 void list_insert_before(list_t *l, list_item_t *next, void *v) {
   list_item_t *i;
 
-  i = (list_item_t *)malloc(sizeof(*i));
+  i = (list_item_t *)checked_malloc(sizeof(*i));
   list_item_init(i, v);
 
   /* Assume next is actually in the list! */
@@ -310,7 +310,7 @@ void list_insert_before(list_t *l, list_item_t *next, void *v) {
 void list_insert_after(list_t *l, list_item_t *pred, void *v) {
   list_item_t *i;
 
-  i = (list_item_t *)malloc(sizeof(*i));
+  i = (list_item_t *)checked_malloc(sizeof(*i));
   list_item_init(i, v);
 
   /* Assume pred is actually in the list! */
@@ -333,7 +333,7 @@ void list_insert_sorted(list_t *l, void *v) {
   list_item_t *itr;
   list_item_t *i;
 
-  i = (list_item_t *)malloc(sizeof(*i));
+  i = (list_item_t *)checked_malloc(sizeof(*i));
   list_item_init(i, v);
 
   if (l->head) {
@@ -509,7 +509,7 @@ long transform_to_cuda(node *root, bool verbose) {
   gettimeofday(&one, NULL);
   long max_nodes = (long)(pow(order, log(size) / log(order / 2.0) - 1) + 1);
   malloc_size = size * sizeof(record) + max_nodes * sizeof(knode);
-  mem = (char *)malloc(malloc_size);
+  mem = (char *)checked_malloc(malloc_size);
   if (mem == NULL) {
     printf("Initial malloc error\n");
     exit(1);
@@ -615,7 +615,7 @@ list_t *findRange(node *root, int start, int end) {
   if (c == NULL)
     return NULL;
 
-  list_t *retList = (list_t *)malloc(sizeof(list_t));
+  list_t *retList = (list_t *)checked_malloc(sizeof(list_t));
   list_init(retList, NULL, NULL);
 
   bool cont = true;
@@ -861,7 +861,7 @@ int cut(int length) {
 
 /* Creates a new record to hold the value to which a key refers. */
 record *make_record(int value) {
-  record *new_record = (record *)malloc(sizeof(record));
+  record *new_record = (record *)checked_malloc(sizeof(record));
   if (new_record == NULL) {
     perror("Record creation.");
     exit(EXIT_FAILURE);
@@ -875,17 +875,17 @@ record *make_record(int value) {
  * an internal node. */
 node *make_node(void) {
   node *new_node;
-  new_node = (node *)malloc(sizeof(node));
+  new_node = (node *)checked_malloc(sizeof(node));
   if (new_node == NULL) {
     perror("Node creation.");
     exit(EXIT_FAILURE);
   }
-  new_node->keys = (int *)malloc((order - 1) * sizeof(int));
+  new_node->keys = (int *)checked_malloc((order - 1) * sizeof(int));
   if (new_node->keys == NULL) {
     perror("New node keys array.");
     exit(EXIT_FAILURE);
   }
-  new_node->pointers = (void **)malloc(order * sizeof(void *));
+  new_node->pointers = (void **)checked_malloc(order * sizeof(void *));
   if (new_node->pointers == NULL) {
     perror("New node pointers array.");
     exit(EXIT_FAILURE);
@@ -946,13 +946,13 @@ node *insert_into_leaf_after_splitting(node *root, node *leaf, int key,
 
   new_leaf = make_leaf();
 
-  temp_keys = (int *)malloc(order * sizeof(int));
+  temp_keys = (int *)checked_malloc(order * sizeof(int));
   if (temp_keys == NULL) {
     perror("Temporary keys array.");
     exit(EXIT_FAILURE);
   }
 
-  temp_pointers = (void **)malloc(order * sizeof(void *));
+  temp_pointers = (void **)checked_malloc(order * sizeof(void *));
   if (temp_pointers == NULL) {
     perror("Temporary pointers array.");
     exit(EXIT_FAILURE);
@@ -1041,12 +1041,12 @@ node *insert_into_node_after_splitting(node *root, node *old_node,
    * the other half to the new.
    */
 
-  temp_pointers = (node **)malloc((order + 1) * sizeof(node *));
+  temp_pointers = (node **)checked_malloc((order + 1) * sizeof(node *));
   if (temp_pointers == NULL) {
     perror("Temporary pointers array for splitting nodes.");
     exit(EXIT_FAILURE);
   }
-  temp_keys = (int *)malloc(order * sizeof(int));
+  temp_keys = (int *)checked_malloc(order * sizeof(int));
   if (temp_keys == NULL) {
     perror("Temporary keys array for splitting nodes.");
     exit(EXIT_FAILURE);
@@ -1680,7 +1680,7 @@ int main(int argc, char **argv) {
   rewind(commandFile);
 
   // allocate memory to contain the whole file:
-  commandBuffer = (char *)malloc(sizeof(char) * lSize);
+  commandBuffer = (char *)checked_malloc(sizeof(char) * lSize);
   if (commandBuffer == NULL) {
     fputs("Command Buffer memory error", stderr);
     exit(2);
@@ -1916,19 +1916,19 @@ int main(int argc, char **argv) {
 
       // INPUT: currKnode CPU allocation
       long *currKnode;
-      currKnode = (long *)malloc(count * sizeof(long));
+      currKnode = (long *)checked_malloc(count * sizeof(long));
       // INPUT: offset CPU initialization
       memset(currKnode, 0, count * sizeof(long));
 
       // INPUT: offset CPU allocation
       long *offset;
-      offset = (long *)malloc(count * sizeof(long));
+      offset = (long *)checked_malloc(count * sizeof(long));
       // INPUT: offset CPU initialization
       memset(offset, 0, count * sizeof(long));
 
       // INPUT: keys CPU allocation
       int *keys;
-      keys = (int *)malloc(count * sizeof(int));
+      keys = (int *)checked_malloc(count * sizeof(int));
       // INPUT: keys CPU initialization
       int i;
       for (i = 0; i < count; i++) {
@@ -1936,7 +1936,7 @@ int main(int argc, char **argv) {
       }
 
       // OUTPUT: ans CPU allocation
-      record *ans = (record *)malloc(sizeof(record) * count);
+      record *ans = (record *)checked_malloc(sizeof(record) * count);
       // OUTPUT: ans CPU initialization
       for (i = 0; i < count; i++) {
         ans[i].value = -1;
@@ -2045,33 +2045,33 @@ int main(int argc, char **argv) {
 
       // INPUT: currKnode CPU allocation
       long *currKnode;
-      currKnode = (long *)malloc(count * sizeof(long));
+      currKnode = (long *)checked_malloc(count * sizeof(long));
       // INPUT: offset CPU initialization
       memset(currKnode, 0, count * sizeof(long));
 
       // INPUT: offset CPU allocation
       long *offset;
-      offset = (long *)malloc(count * sizeof(long));
+      offset = (long *)checked_malloc(count * sizeof(long));
       // INPUT: offset CPU initialization
       memset(offset, 0, count * sizeof(long));
 
       // INPUT: lastKnode CPU allocation
       long *lastKnode;
-      lastKnode = (long *)malloc(count * sizeof(long));
+      lastKnode = (long *)checked_malloc(count * sizeof(long));
       // INPUT: offset CPU initialization
       memset(lastKnode, 0, count * sizeof(long));
 
       // INPUT: offset_2 CPU allocation
       long *offset_2;
-      offset_2 = (long *)malloc(count * sizeof(long));
+      offset_2 = (long *)checked_malloc(count * sizeof(long));
       // INPUT: offset CPU initialization
       memset(offset_2, 0, count * sizeof(long));
 
       // INPUT: start, end CPU allocation
       int *start;
-      start = (int *)malloc(count * sizeof(int));
+      start = (int *)checked_malloc(count * sizeof(int));
       int *end;
-      end = (int *)malloc(count * sizeof(int));
+      end = (int *)checked_malloc(count * sizeof(int));
       // INPUT: start, end CPU initialization
       int i;
       for (i = 0; i < count; i++) {
@@ -2085,9 +2085,9 @@ int main(int argc, char **argv) {
 
       // INPUT: recstart, reclenght CPU allocation
       int *recstart;
-      recstart = (int *)malloc(count * sizeof(int));
+      recstart = (int *)checked_malloc(count * sizeof(int));
       int *reclength;
-      reclength = (int *)malloc(count * sizeof(int));
+      reclength = (int *)checked_malloc(count * sizeof(int));
       // OUTPUT: ans CPU initialization
       for (i = 0; i < count; i++) {
         recstart[i] = 0;

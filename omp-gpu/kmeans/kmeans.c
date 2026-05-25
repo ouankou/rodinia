@@ -226,6 +226,13 @@ int main(int argc, char **argv) {
 
   printf("number of Clusters %d\n", nclusters);
   printf("number of Attributes %d\n\n", numAttributes);
+  double checksum = 0.0;
+  for (i = 0; i < nclusters; i++) {
+    for (j = 0; j < numAttributes; j++) {
+      checksum += cluster_centres[i][j];
+    }
+  }
+  printf("Cluster centers checksum: %.8f\n", checksum);
   /*  	printf("Cluster Centers Output\n");
         printf("The first number is cluster number and the following data is
     arribute value\n");

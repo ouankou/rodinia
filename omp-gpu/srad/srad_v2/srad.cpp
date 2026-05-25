@@ -102,9 +102,11 @@ int main(int argc, char *argv[]) {
     for (iter = 0; iter < niter; iter++) {
       sum = 0;
       sum2 = 0;
+#pragma omp target teams distribute parallel for collapse(2)                  \
+    reduction(+ : sum, sum2) firstprivate(r1, r2, c1, c2, cols)
       for (i = r1; i <= r2; i++) {
         for (j = c1; j <= c2; j++) {
-          tmp = J[i * cols + j];
+          float tmp = J[i * cols + j];
           sum += tmp;
           sum2 += tmp * tmp;
         }

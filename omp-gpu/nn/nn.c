@@ -7,7 +7,7 @@
 
 #define MAX_ARGS 10
 #define REC_LENGTH 49   // size of a record in db
-#define REC_WINDOW 10   // number of records to read at a time
+#define REC_WINDOW 1024 // number of records to read at a time
 #define LATITUDE_POS 28 // location of latitude coordinates in input record
 #define OPEN 10000      // initial value of nearest neighbors
 struct neighbor {

@@ -233,9 +233,11 @@ int main(int argc, char *argv[]) {
       // ROI statistics for entire ROI (single number for ROI)
       sum = 0;
       sum2 = 0;
+#pragma omp target teams distribute parallel for collapse(2)                  \
+    reduction(+ : sum, sum2) firstprivate(r1, r2, c1, c2, Nr)
       for (i = r1; i <= r2; i++) {   // do for the range of rows in ROI
         for (j = c1; j <= c2; j++) { // do for the range of columns in ROI
-          tmp = image[i + Nr * j];   // get coresponding value in IMAGE
+          float tmp = image[i + Nr * j]; // get coresponding value in IMAGE
           sum += tmp;                // take corresponding value and add to sum
           sum2 +=
               tmp * tmp; // take square of corresponding value and add to sum2
