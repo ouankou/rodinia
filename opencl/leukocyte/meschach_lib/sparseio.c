@@ -246,9 +246,9 @@ SPMAT  *sp_finput(FILE *fp)
 		      if ( len >= scratch_len )
 			{
 			  {
-			    row_elt *new_scratch = scratch
-			      ? (row_elt *)realloc((char *)scratch, (size_t)(2*scratch_len) * sizeof(row_elt))
-			      : (row_elt *)calloc((size_t)(2*scratch_len), sizeof(row_elt));
+				    row_elt *new_scratch = scratch
+				      ? (row_elt *)realloc(scratch, (size_t)(2*scratch_len) * sizeof(row_elt))
+				      : (row_elt *)calloc((size_t)(2*scratch_len), sizeof(row_elt));
 			    if ( ! new_scratch )
 			      error(E_MEM,"sp_finput");
 			    scratch = new_scratch;
@@ -337,7 +337,7 @@ SPMAT  *sp_finput(FILE *fp)
 			{
 			  {
 			    row_elt *new_scratch = scratch
-			      ? (row_elt *)realloc((char *)scratch, (size_t)(2*scratch_len) * sizeof(row_elt))
+			      ? (row_elt *)realloc(scratch, (size_t)(2*scratch_len) * sizeof(row_elt))
 			      : (row_elt *)calloc((size_t)(2*scratch_len), sizeof(row_elt));
 			    if ( ! new_scratch )
 			      error(E_MEM,"sp_finput");

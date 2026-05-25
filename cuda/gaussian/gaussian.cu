@@ -66,7 +66,7 @@ void
 create_matrix(float *m, int size){
   int i,j;
   float lamda = -0.01;
-  float *coe = (float *)malloc(sizeof(float)*(2*size-1));
+  float *coe = (float *)malloc(((size_t)2 * (size_t)size - 1) * sizeof(float));
   float coe_i =0.0;
 
   if (coe == NULL) {

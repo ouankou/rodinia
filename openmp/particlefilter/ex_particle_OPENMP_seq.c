@@ -227,8 +227,13 @@ void getneighbors(int * se, int numOnes, double * neighbors, int radius){
 */
 void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 	int k;
-	int max_size = IszX*IszY*Nfr;
-	memset(I, 0, sizeof(int)*max_size);
+	size_t total_size = (size_t)IszX * (size_t)IszY * (size_t)Nfr;
+	if (total_size > INT_MAX) {
+		fprintf(stderr, "Video sequence is too large for int indexing\n");
+		exit(EXIT_FAILURE);
+	}
+	int max_size = (int)total_size;
+	memset(I, 0, sizeof(int) * total_size);
 	/*get object centers*/
 	int x0 = (int)roundDouble(IszY/2.0);
 	int y0 = (int)roundDouble(IszX/2.0);
@@ -246,7 +251,7 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 	}
 
 	/*dilate matrix*/
-	int * newMatrix = (int *)calloc(max_size, sizeof(int));
+	int * newMatrix = (int *)calloc(total_size, sizeof(int));
 	imdilate_disk(I, IszX, IszY, Nfr, 5, newMatrix);
 	int x, y;
 	for(x = 0; x < IszX; x++){
@@ -345,8 +350,13 @@ int findIndexBin(double * CDF, int beginIndex, int endIndex, double value){
 * @param Nparticles The number of particles to be used
 */
 void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparticles){
-	
-	int max_size = IszX*IszY*Nfr;
+
+	size_t total_size = (size_t)IszX * (size_t)IszY * (size_t)Nfr;
+	if (total_size > INT_MAX) {
+		fprintf(stderr, "Video sequence is too large for int indexing\n");
+		exit(EXIT_FAILURE);
+	}
+	int max_size = (int)total_size;
 	long long start = get_time();
 	//original particle centroid
 	double xe = roundDouble(IszY/2.0);

@@ -567,8 +567,12 @@ void getneighbors(int * se, int numOnes, int * neighbors, int radius) {
  */
 void videoSequence(unsigned char * I, int IszX, int IszY, int Nfr, int * seed) {
     int k;
-    int max_size = IszX * IszY * Nfr;
-    size_t total_size = (size_t) max_size;
+    size_t total_size = (size_t)IszX * (size_t)IszY * (size_t)Nfr;
+    if (total_size > INT_MAX) {
+        fprintf(stderr, "Video sequence is too large for int indexing\n");
+        exit(EXIT_FAILURE);
+    }
+    int max_size = (int)total_size;
     memset(I, 0, sizeof(unsigned char) * total_size);
     /*get object centers*/
     int x0 = (int) roundDouble(IszY / 2.0);
@@ -642,7 +646,12 @@ int findIndex(double * CDF, int lengthCDF, double value) {
  * @param Nparticles The number of particles to be used
  */
 void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, int Nparticles) {
-    int max_size = IszX * IszY*Nfr;
+    size_t total_size = (size_t)IszX * (size_t)IszY * (size_t)Nfr;
+    if (total_size > INT_MAX) {
+        fprintf(stderr, "Video sequence is too large for int indexing\n");
+        exit(EXIT_FAILURE);
+    }
+    int max_size = (int)total_size;
     //original particle centroid
     double xe = roundDouble(IszY / 2.0);
     double ye = roundDouble(IszX / 2.0);

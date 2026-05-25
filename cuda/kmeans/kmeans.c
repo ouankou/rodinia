@@ -177,7 +177,7 @@ int setup(int argc, char **argv) {
     //io_timing = omp_get_wtime();
     if (isBinaryFile) {		//Binary file input
         int infile;
-        if ((infile = open(filename, O_RDONLY, 0600)) == -1) {
+        if ((infile = open(filename, O_RDONLY)) == -1) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
             exit(1);
         }

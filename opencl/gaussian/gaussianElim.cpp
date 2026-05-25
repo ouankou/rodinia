@@ -44,7 +44,7 @@ void
 create_matrix(float *m, int size){
   int i,j;
   float lamda = -0.01;
-  std::vector<float> coe(2*size-1);
+  std::vector<float> coe((size_t)2 * (size_t)size - 1);
   float coe_i =0.0;
 
   for (i=0; i < size; i++)

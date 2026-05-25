@@ -219,7 +219,7 @@ __kernel void normalize_weights_kernel(__global float * weights, int Nparticles,
 
 	if(0 == local_id) {
 		sumWeights = partial_sums[0];
-		bad_sum = (!(sumWeights > 0.0f) || sumWeights != sumWeights);
+		bad_sum = (!(sumWeights > 0.0f) || !isfinite(sumWeights));
 	}
 
 	barrier(CLK_LOCAL_MEM_FENCE);
