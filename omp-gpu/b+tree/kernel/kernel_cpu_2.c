@@ -76,7 +76,7 @@ void kernel_cpu_2(knode *knodes, long knodes_elem,
 #pragma omp target teams distribute parallel for          \
  private(i, thid)                                  \
         map(to                                                                 \
-            : currKnode [0:count], offset [0:count])                           \
+            : knodes [0:knodes_elem], currKnode [0:count], offset [0:count])   \
             map(to                                                             \
                 : start [0:count], end [0:count])                              \
                 map(to                                                         \

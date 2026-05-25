@@ -197,7 +197,9 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
       delta = 0.0;
 
 #pragma omp target teams distribute parallel for private(j)                    \
-    firstprivate(npoints, nclusters, nfeatures) reduction(+ : delta)
+    firstprivate(npoints, nclusters, nfeatures)                                \
+    map(to : feature [0:feature_size], clusters [0:center_size])               \
+    map(tofrom : membership [0:npoints]) reduction(+ : delta)
       for (i = 0; i < npoints; i++) {
         /* find the index of nestest cluster centers */
         int index = find_nearest_point_flat(feature + i * nfeatures, nfeatures,
@@ -211,7 +213,9 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
       }
 
 #pragma omp target teams distribute parallel for collapse(2)                  \
-    firstprivate(npoints, nclusters, num_chunks)
+    firstprivate(npoints, nclusters, num_chunks)                              \
+    map(to : membership [0:npoints])                                          \
+    map(tofrom : partial_centers_len [0:num_chunks * nclusters])
       for (int chunk = 0; chunk < num_chunks; chunk++) {
         for (int cluster = 0; cluster < nclusters; cluster++) {
           int start = (int)(((long long)chunk * npoints) / num_chunks);
@@ -226,7 +230,9 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
       }
 
 #pragma omp target teams distribute parallel for collapse(3)                  \
-    firstprivate(npoints, nclusters, nfeatures, num_chunks, center_size)
+    firstprivate(npoints, nclusters, nfeatures, num_chunks, center_size)      \
+    map(to : feature [0:feature_size], membership [0:npoints])                \
+    map(tofrom : partial_centers [0:num_chunks * center_size])
       for (int chunk = 0; chunk < num_chunks; chunk++) {
         for (int cluster = 0; cluster < nclusters; cluster++) {
           for (int feature_idx = 0; feature_idx < nfeatures; feature_idx++) {
@@ -244,7 +250,9 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
       }
 
 #pragma omp target teams distribute parallel for                              \
-    firstprivate(nclusters, num_chunks)
+    firstprivate(nclusters, num_chunks)                                       \
+    map(to : partial_centers_len [0:num_chunks * nclusters])                  \
+    map(tofrom : new_centers_len [0:nclusters])
       for (i = 0; i < nclusters; i++) {
         int count = 0;
         for (int chunk = 0; chunk < num_chunks; chunk++)
@@ -253,7 +261,9 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
       }
 
 #pragma omp target teams distribute parallel for collapse(2)                  \
-    firstprivate(nclusters, nfeatures, num_chunks, center_size)
+    firstprivate(nclusters, nfeatures, num_chunks, center_size)               \
+    map(to : partial_centers [0:num_chunks * center_size])                    \
+    map(tofrom : new_centers [0:center_size])
       for (i = 0; i < nclusters; i++) {
         for (j = 0; j < nfeatures; j++) {
           float sum = 0.0f;
@@ -265,7 +275,9 @@ float **kmeans_clustering(float **h_feature, /* in: [npoints][nfeatures] */
 
       /* replace old cluster centers with new_centers */
 #pragma omp target teams distribute parallel for collapse(2)                  \
-    firstprivate(nclusters, nfeatures)
+    firstprivate(nclusters, nfeatures)                                        \
+    map(to : new_centers [0:center_size], new_centers_len [0:nclusters])      \
+    map(tofrom : clusters [0:center_size])
       for (i = 0; i < nclusters; i++) {
         for (j = 0; j < nfeatures; j++) {
           if (new_centers_len[i] > 0)

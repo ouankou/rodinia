@@ -156,6 +156,8 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(flist);
+  free(z);
+  free(neighbors);
 
   long long time1 = clock();
   printf("total time : %15.12f s\n", (float)(time1 - time0) / 1000000);

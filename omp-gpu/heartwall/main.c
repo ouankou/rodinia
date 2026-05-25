@@ -136,6 +136,7 @@ int main(int argc, char *argv[]) {
     printf("ERROR: %d is an incorrect number of frames specified, select in "
            "the range of 0-%d\n",
            frames_processed, public.frames);
+    AVI_close(d_frames);
     return 0;
   }
 
@@ -690,6 +691,8 @@ int main(int argc, char *argv[]) {
     omp_target_free(point_priv[i].d_tMask, device_id);
     omp_target_free(point_priv[i].d_mask_conv, device_id);
   }
+  AVI_close(d_frames);
+  return 0;
 }
 
 //========================================================================================================================================================================================================

@@ -183,10 +183,9 @@ void bpnn_layerforward(float *l1, float *l2, float *conn, int n1, int n2) {
   l1[0] = 1.0;
 #pragma omp target update to(l1[0:1])
 
-#pragma omp target teams distribute                       \
-    map(alloc                                                                  \
-        : l1 [0:n1 + 1], l2 [0:n2 + 1]) map(to                                 \
-                                            : conn [0:(n1 + 1) * (n2 + 1)])
+#pragma omp target teams distribute                                               \
+    map(to : l1 [0:n1 + 1], conn [0:(n1 + 1) * (n2 + 1)])                         \
+    map(tofrom : l2 [0:n2 + 1])
   /*** For each unit in second layer ***/
   for (int j = 1; j <= n2; j++) {
 
@@ -203,8 +202,9 @@ void bpnn_layerforward(float *l1, float *l2, float *conn, int n1, int n2) {
 void bpnn_output_error(float *delta, float *target, float *output, int nj,
                        float *err) {
   float errsum = 0.0;
-#pragma omp target teams distribute parallel for          \
- reduction(+ : errsum)
+#pragma omp target teams distribute parallel for                                  \
+    map(to : target [0:nj + 1], output [0:nj + 1])                                \
+    map(tofrom : delta [0:nj + 1]) reduction(+ : errsum)
   for (int j = 1; j <= nj; j++) {
     float o = output[j];
     float t = target[j];
@@ -217,7 +217,10 @@ void bpnn_output_error(float *delta, float *target, float *output, int nj,
 void bpnn_hidden_error(float *delta_h, int nh, float *delta_o, int no,
                        float *who, float *hidden, float *err) {
   float errsum = 0.0;
-#pragma omp target teams distribute reduction(+ : errsum)
+#pragma omp target teams distribute                                               \
+    map(to : delta_o [0:no + 1], who [0:(nh + 1) * (no + 1)],                     \
+        hidden [0:nh + 1])                                                        \
+    map(tofrom : delta_h [0:nh + 1]) reduction(+ : errsum)
   for (int j = 1; j <= nh; j++) {
     float h = hidden[j];
     float sum = 0.0;
@@ -236,8 +239,10 @@ void bpnn_adjust_weights(float *delta, int ndelta, float *ly, int nly, float *w,
   ly[0] = 1.0;
 #pragma omp target update to(ly[0:1])
 
-#pragma omp target teams distribute parallel for          \
- collapse(2)
+#pragma omp target teams distribute parallel for                                  \
+    map(to : delta [0:ndelta + 1], ly [0:nly + 1])                                \
+    map(tofrom : w [0:(nly + 1) * (ndelta + 1)],                                  \
+        oldw [0:(nly + 1) * (ndelta + 1)]) collapse(2)
   for (int j = 1; j <= ndelta; j++) {
     for (int k = 0; k <= nly; k++) {
       float new_dw =

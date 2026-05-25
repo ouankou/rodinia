@@ -117,7 +117,9 @@ void nw_optimized(int *input_itemsets, int *output_itemsets, int *referrence,
 
     for (int blk = 1; blk <= (max_cols - 1) / BLOCK_SIZE; blk++) {
 #pragma omp target teams distribute parallel for                              \
-    firstprivate(blk, max_rows, max_cols, penalty)
+    firstprivate(blk, max_rows, max_cols, penalty)                            \
+    map(to : referrence [0:transfer_size])                                    \
+    map(tofrom : input_itemsets [0:transfer_size])
       for (int b_index_x = 0; b_index_x < blk; ++b_index_x) {
         int b_index_y = blk - 1 - b_index_x;
         int input_itemsets_l[(BLOCK_SIZE + 1) * (BLOCK_SIZE + 1)]
@@ -171,7 +173,9 @@ void nw_optimized(int *input_itemsets, int *output_itemsets, int *referrence,
 
     for (int blk = 2; blk <= (max_cols - 1) / BLOCK_SIZE; blk++) {
 #pragma omp target teams distribute parallel for                              \
-    firstprivate(blk, max_rows, max_cols, penalty)
+    firstprivate(blk, max_rows, max_cols, penalty)                            \
+    map(to : referrence [0:transfer_size])                                    \
+    map(tofrom : input_itemsets [0:transfer_size])
       for (int b_index_x = blk - 1; b_index_x < (max_cols - 1) / BLOCK_SIZE;
            ++b_index_x) {
         int b_index_y = (max_cols - 1) / BLOCK_SIZE + blk - 2 - b_index_x;

@@ -30,8 +30,10 @@ void single_iteration(double *result, double *temp, double *power, int row,
                       double step) {
   double delta;
   int r, c;
+  const int size = row * col;
 
 #pragma omp target teams distribute parallel for collapse(2)                   \
+    map(to : temp [0:size], power [0:size]) map(tofrom : result [0:size])      \
     firstprivate(row, col, Cap, Rx, Ry, Rz, step)
   for (r = 0; r < row; r++)
     for (c = 0; c < col; c++) {

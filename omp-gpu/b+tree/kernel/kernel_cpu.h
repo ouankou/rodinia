@@ -8,6 +8,7 @@
 
 void
 kernel_cpu(	record *records,
+			long records_elem,
 			knode *knodes,
 			long knodes_elem,
 

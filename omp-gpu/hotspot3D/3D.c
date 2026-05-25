@@ -283,6 +283,8 @@ int main(int argc, char** argv)
     printf("time for serial version: %lld\n",end2-end1);
     printf("time for OpenMP Offloading version: %lld\n",end1-start);
     writeoutput(tempOut,numRows, numCols, layers, ofile);
+    free(tempCopy);
+    free(answer);
     free(tempIn);
     free(tempOut); free(powerIn);
     return 0;

@@ -60,10 +60,10 @@ int main(int argc, char *argv[]) {
   J = (float *)malloc(size_I * sizeof(float));
   c = (float *)malloc(sizeof(float) * size_I);
 
-  iN = (int *)malloc(sizeof(unsigned int *) * rows);
-  iS = (int *)malloc(sizeof(unsigned int *) * rows);
-  jW = (int *)malloc(sizeof(unsigned int *) * cols);
-  jE = (int *)malloc(sizeof(unsigned int *) * cols);
+  iN = (int *)malloc(sizeof(int) * rows);
+  iS = (int *)malloc(sizeof(int) * rows);
+  jW = (int *)malloc(sizeof(int) * cols);
+  jE = (int *)malloc(sizeof(int) * cols);
 
   dN = (float *)malloc(sizeof(float) * size_I);
   dS = (float *)malloc(sizeof(float) * size_I);
@@ -96,14 +96,17 @@ int main(int argc, char *argv[]) {
 #pragma omp target data map(tofrom                                             \
                             : J [0:size_I])                                    \
     map(to                                                                     \
-        : iN [0:rows], iS [0:rows], jW [0:cols], jE [0:cols], dN [0:size_I],   \
-          dS [0:size_I], dW [0:size_I], dE [0:size_I], c [0:size_I])
+        : iN [0:rows], iS [0:rows], jW [0:cols], jE [0:cols])                  \
+    map(alloc                                                                  \
+        : dN [0:size_I], dS [0:size_I], dW [0:size_I], dE [0:size_I],          \
+          c [0:size_I])
   {
     for (iter = 0; iter < niter; iter++) {
       sum = 0;
       sum2 = 0;
 #pragma omp target teams distribute parallel for collapse(2)                  \
-    reduction(+ : sum, sum2) firstprivate(r1, r2, c1, c2, cols)
+    map(to : J [0:size_I]) reduction(+ : sum, sum2)                           \
+    firstprivate(r1, r2, c1, c2, cols)
       for (i = r1; i <= r2; i++) {
         for (j = c1; j <= c2; j++) {
           float tmp = J[i * cols + j];
@@ -117,7 +120,11 @@ int main(int argc, char *argv[]) {
 
 #pragma omp target teams distribute parallel for shared(                       \
     J, dN, dS, dW, dE, c, rows, cols, iN, iS, jW,                              \
-    jE) private(i, j, k, Jc, G2, L, num, den, qsqr)       \
+    jE) map(to : J [0:size_I], iN [0:rows], iS [0:rows], jW [0:cols],          \
+             jE [0:cols])                                                      \
+    map(tofrom                                                                 \
+        : dN [0:size_I], dS [0:size_I], dW [0:size_I], dE [0:size_I],          \
+          c [0:size_I]) private(i, j, k, Jc, G2, L, num, den, qsqr)       \
 
       for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
@@ -153,7 +160,10 @@ int main(int argc, char *argv[]) {
         }
       }
 #pragma omp target teams distribute parallel for shared(                       \
-    J, c, rows, cols, lambda) private(i, j, k, D, cS, cN, cW, cE)              \
+    J, c, rows, cols, lambda)                                                  \
+    map(to : c [0:size_I], dN [0:size_I], dS [0:size_I], dW [0:size_I],        \
+        dE [0:size_I], iS [0:rows], jE [0:cols])                               \
+    map(tofrom : J [0:size_I]) private(i, j, k, D, cS, cN, cW, cE)             \
 
       for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {

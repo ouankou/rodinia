@@ -27,7 +27,8 @@
 //	KERNEL_CPU FUNCTION
 //========================================================================================================================================================================================================200
 
-void kernel_cpu(record *records, knode *knodes, long knodes_elem,
+void kernel_cpu(record *records, long records_elem, knode *knodes,
+                long knodes_elem,
 
                 int order, long maxheight, int count,
 
@@ -66,7 +67,7 @@ void kernel_cpu(record *records, knode *knodes, long knodes_elem,
 #pragma omp target teams distribute parallel for private(i, thid)              \
                               \
         map(to                                                                 \
-            : currKnode [0:count], offset [0:count])                           \
+            : records [0:records_elem], currKnode [0:count], offset [0:count]) \
             map(to                                                             \
                 : knodes [0:knodes_elem], keys [0:count]) map(tofrom           \
                                                               : ans [0:count])
@@ -87,8 +88,8 @@ void kernel_cpu(record *records, knode *knodes, long knodes_elem,
           // segmentation fault more specifically, values saved into
           // knodes->indices in the main function are out of bounds of knodes
           // that they address
-          if (knodes[offset[bid]].indices[thid] < knodes_elem) {
-            offset[bid] = knodes[offset[bid]].indices[thid];
+          if (knodes[currKnode[bid]].indices[thid] < knodes_elem) {
+            offset[bid] = knodes[currKnode[bid]].indices[thid];
           }
         }
       }

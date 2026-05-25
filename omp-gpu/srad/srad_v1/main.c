@@ -224,8 +224,8 @@ int main(int argc, char *argv[]) {
 #pragma omp target data map(tofrom                                             \
                             : image [0:Ne])                                    \
     map(to                                                                     \
-        : iN [0:Nr], iS [0:Nr], jW [0:Nc], jE [0:Nc], dN [0:Ne], dS [0:Ne],    \
-          dW [0:Ne], dE [0:Ne], c [0:Ne])
+        : iN [0:Nr], iS [0:Nr], jW [0:Nc], jE [0:Nc])                         \
+    map(alloc : dN [0:Ne], dS [0:Ne], dW [0:Ne], dE [0:Ne], c [0:Ne])
   {
     for (iter = 0; iter < niter;
          iter++) { // do for the number of iterations input parameter
@@ -234,7 +234,8 @@ int main(int argc, char *argv[]) {
       sum = 0;
       sum2 = 0;
 #pragma omp target teams distribute parallel for collapse(2)                  \
-    reduction(+ : sum, sum2) firstprivate(r1, r2, c1, c2, Nr)
+    map(to : image [0:Ne]) reduction(+ : sum, sum2)                           \
+    firstprivate(r1, r2, c1, c2, Nr)
       for (i = r1; i <= r2; i++) {   // do for the range of rows in ROI
         for (j = c1; j <= c2; j++) { // do for the range of columns in ROI
           float tmp = image[i + Nr * j]; // get coresponding value in IMAGE
@@ -250,7 +251,9 @@ int main(int argc, char *argv[]) {
       // directional derivatives, ICOV, diffusion coefficent
 #pragma omp target teams distribute parallel for shared(                       \
     image, dN, dS, dW, dE, c, Nr, Nc, iN, iS, jW,                              \
-    jE) private(i, j, k, Jc, G2, L, num, den, qsqr)       \
+    jE) map(to : image [0:Ne], iN [0:Nr], iS [0:Nr], jW [0:Nc], jE [0:Nc])     \
+    map(tofrom : dN [0:Ne], dS [0:Ne], dW [0:Ne], dE [0:Ne], c [0:Ne])         \
+    private(i, j, k, Jc, G2, L, num, den, qsqr)       \
 
       for (j = 0; j < Nc; j++) { // do for the range of columns in IMAGE
 
@@ -300,7 +303,10 @@ int main(int argc, char *argv[]) {
 
       // divergence & image update
 #pragma omp target teams distribute parallel for shared(                       \
-    image, c, Nr, Nc, lambda) private(i, j, k, D, cS, cN, cW, cE)              \
+    image, c, Nr, Nc, lambda)                                                  \
+    map(to : c [0:Ne], dN [0:Ne], dS [0:Ne], dW [0:Ne], dE [0:Ne],             \
+        iS [0:Nr], jE [0:Nc])                                                  \
+    map(tofrom : image [0:Ne]) private(i, j, k, D, cS, cN, cW, cE)             \
 
       for (j = 0; j < Nc; j++) { // do for the range of columns in IMAGE
 

@@ -56,6 +56,7 @@
 
 #include <limits.h> // (in directory known to compiler)			needed by INT_MIN, INT_MAX
 #include <math.h>  // (in directory known to compiler)			needed by log, pow
+#include <stddef.h> // (in directory known to compiler)			needed by ptrdiff_t
 #include <stdio.h> // (in directory known to compiler)			needed by printf, stderr
 #include <string.h>   // (in directory known to compiler)			needed by memset
 #include <sys/time.h> // (in directory known to compiler)			needed by ???
@@ -102,7 +103,7 @@
 knode *knodes;
 record *krecords;
 char *mem;
-long freeptr;
+char *freeptr;
 long malloc_size;
 long size;
 long maxheight;
@@ -491,9 +492,9 @@ bool list_reverse_iterator_is_valid(list_reverse_iterator_t *li) {
 void *kmalloc(int size) {
 
   // printf("size: %d, current offset: %p\n",size,freeptr);
-  void *r = (void *)freeptr;
+  void *r = freeptr;
   freeptr += size;
-  if (freeptr > malloc_size + (long)mem) {
+  if (freeptr > mem + malloc_size) {
     printf("Memory Overflow\n");
     exit(1);
   }
@@ -514,7 +515,7 @@ long transform_to_cuda(node *root, bool verbose) {
     printf("Initial malloc error\n");
     exit(1);
   }
-  freeptr = (long)mem;
+  freeptr = mem;
 
   krecords = (record *)kmalloc(size * sizeof(record));
   // printf("%d records\n", size);
@@ -1675,12 +1676,21 @@ int main(int argc, char **argv) {
   }
 
   // obtain file size:
-  fseek(commandFile, 0, SEEK_END);
+  if (fseek(commandFile, 0, SEEK_END) != 0) {
+    fputs("Command File seek error", stderr);
+    fclose(commandFile);
+    exit(1);
+  }
   lSize = ftell(commandFile);
+  if (lSize < 0) {
+    fputs("Command File size error", stderr);
+    fclose(commandFile);
+    exit(1);
+  }
   rewind(commandFile);
 
   // allocate memory to contain the whole file:
-  commandBuffer = (char *)checked_malloc(sizeof(char) * lSize);
+  commandBuffer = (char *)checked_malloc((size_t)lSize + 1);
   if (commandBuffer == NULL) {
     fputs("Command Buffer memory error", stderr);
     exit(2);
@@ -1688,10 +1698,11 @@ int main(int argc, char **argv) {
 
   // copy the file into the buffer:
   result = fread(commandBuffer, 1, lSize, commandFile);
-  if (result != lSize) {
+  if (result != (size_t)lSize) {
     fputs("Command file reading error", stderr);
     exit(3);
   }
+  commandBuffer[result] = '\0';
 
   /* the whole file is now loaded in the memory buffer. */
 
@@ -1747,8 +1758,7 @@ int main(int argc, char **argv) {
     size = input;
 
     // save all numbers
-    while (!feof(file_pointer)) {
-      fscanf(file_pointer, "%d\n", &input);
+    while (fscanf(file_pointer, "%d\n", &input) == 1) {
       root = insert(root, input, input);
     }
 
@@ -1769,7 +1779,7 @@ int main(int argc, char **argv) {
   printf("Transforming data to a GPU suitable structure...\n");
   long mem_used = transform_to_cuda(root, 0);
   maxheight = height(root);
-  long rootLoc = (long)knodes - (long)mem;
+  ptrdiff_t rootLoc = (char *)knodes - mem;
 
   // ------------------------------------------------------------60
   // process commands
@@ -1908,11 +1918,12 @@ int main(int argc, char **argv) {
 
       // INPUT: records CPU allocation (setting pointer in mem variable)
       record *records = (record *)mem;
-      long records_elem = (long)rootLoc / sizeof(record);
+      long records_elem = rootLoc / (ptrdiff_t)sizeof(record);
 
       // INPUT: knodes CPU allocation (setting pointer in mem variable)
-      knode *knodes = (knode *)((long)mem + (long)rootLoc);
-      long knodes_elem = ((long)(mem_used) - (long)rootLoc) / sizeof(knode);
+      knode *knodes = (knode *)(mem + rootLoc);
+      long knodes_elem =
+          ((ptrdiff_t)mem_used - rootLoc) / (ptrdiff_t)sizeof(knode);
 
       // INPUT: currKnode CPU allocation
       long *currKnode;
@@ -1951,7 +1962,7 @@ int main(int argc, char **argv) {
         map(tofrom                                                             \
             : ans [0:count])
       {
-        kernel_cpu(records, knodes, knodes_elem,
+        kernel_cpu(records, records_elem, knodes, knodes_elem,
 
                    order, maxheight, count,
 
@@ -2040,8 +2051,9 @@ int main(int argc, char **argv) {
       }
 
       // INPUT: knodes CPU allocation (setting pointer in mem variable)
-      knode *knodes = (knode *)((long)mem + (long)rootLoc);
-      long knodes_elem = ((long)(mem_used) - (long)rootLoc) / sizeof(knode);
+      knode *knodes = (knode *)(mem + rootLoc);
+      long knodes_elem =
+          ((ptrdiff_t)mem_used - rootLoc) / (ptrdiff_t)sizeof(knode);
 
       // INPUT: currKnode CPU allocation
       long *currKnode;
@@ -2167,7 +2179,10 @@ int main(int argc, char **argv) {
   // free remaining memory and exit
   // ------------------------------------------------------------60
 
+  free(commandBuffer);
   free(mem);
+  if (root)
+    root = destroy_tree(root);
   return EXIT_SUCCESS;
 }
 

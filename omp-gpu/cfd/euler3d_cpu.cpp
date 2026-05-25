@@ -59,8 +59,8 @@ template <typename T> T *alloc(int N) { return new T[N]; }
 template <typename T> void dealloc(T *array) { delete[] array; }
 
 template <typename T> void copy(T *dst, T *src, int N) {
-#pragma omp target teams distribute parallel for          \
-
+#pragma omp target teams distribute parallel for map(to : src [0:N])             \
+    map(tofrom : dst [0:N])
   for (int i = 0; i < N; i++) {
     dst[i] = src[i];
   }
@@ -151,7 +151,9 @@ inline float compute_speed_of_sound(float &density, float &pressure) {
 
 void compute_step_factor(int nelr, float *__restrict variables, float *areas,
                          float *__restrict step_factors) {
-#pragma omp target teams distribute default(shared)
+#pragma omp target teams distribute default(shared)                              \
+    map(to : variables [0:(nelr * NVAR)], areas [0:nelr])                       \
+    map(tofrom : step_factors [0:nelr])
   for (int blk = 0; blk < nelr / block_length; ++blk) {
     int b_start = blk * block_length;
     int b_end =
@@ -189,7 +191,16 @@ void compute_flux(int nelr, int *elements_surrounding_elements, float *normals,
                   float3 ff_flux_contribution_density_energy) {
   const float smoothing_coefficient = float(0.2f);
 
-#pragma omp target teams distribute
+#pragma omp target teams distribute                                              \
+    map(to                                                                       \
+        : elements_surrounding_elements [0:(nelr * NNB)],                        \
+          normals [0:(NDIM * NNB * nelr)], variables [0:(nelr * NVAR)],          \
+          ff_variable [0:NVAR])                                                  \
+    map(tofrom : fluxes [0:(nelr * NVAR)])                                       \
+    firstprivate(ff_flux_contribution_momentum_x,                                \
+                 ff_flux_contribution_momentum_y,                                \
+                 ff_flux_contribution_momentum_z,                                \
+                 ff_flux_contribution_density_energy)
   for (int blk = 0; blk < nelr / block_length; ++blk) {
     int b_start = blk * block_length;
     int b_end =
@@ -369,7 +380,11 @@ void compute_flux(int nelr, int *elements_surrounding_elements, float *normals,
 
 void time_step(int j, int nelr, float *old_variables, float *variables,
                float *step_factors, float *fluxes) {
-#pragma omp target teams distribute
+#pragma omp target teams distribute                                              \
+    map(to                                                                       \
+        : old_variables [0:(nelr * NVAR)], step_factors [0:nelr],                \
+          fluxes [0:(nelr * NVAR)])                                              \
+    map(tofrom : variables [0:(nelr * NVAR)]) firstprivate(j)
   for (int blk = 0; blk < nelr / block_length; ++blk) {
     int b_start = blk * block_length;
     int b_end =
@@ -509,14 +524,14 @@ int main(int argc, char **argv) {
   std::cout << "Starting..." << std::endl;
   double start = omp_get_wtime();
 #pragma omp target data map(alloc                                              \
-                            : old_variables [0:(nelr * NVAR)])                 \
+                            : old_variables [0:(nelr * NVAR)],                 \
+                              step_factors [0:nelr], fluxes [0:(nelr * NVAR)]) \
     map(to                                                                     \
-        : nelr, areas [0:nelr], step_factors [0:nelr],                         \
+        : nelr, areas [0:nelr],                                                 \
           elements_surrounding_elements [0:(nelr * NNB)],                      \
-          normals [0:(NDIM * NNB * nelr)], fluxes [0:(nelr * NVAR)],           \
-          ff_variable [0:NVAR], ff_flux_contribution_momentum_x,               \
-          ff_flux_contribution_momentum_y, ff_flux_contribution_momentum_z,    \
-          ff_flux_contribution_density_energy)                                 \
+          normals [0:(NDIM * NNB * nelr)], ff_variable [0:NVAR],               \
+          ff_flux_contribution_momentum_x, ff_flux_contribution_momentum_y,    \
+          ff_flux_contribution_momentum_z, ff_flux_contribution_density_energy) \
         map(variables [0:(nelr * NVAR)])
   {
     // Begin iterations
