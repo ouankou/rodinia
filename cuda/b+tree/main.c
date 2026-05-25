@@ -1943,18 +1943,32 @@ main(	int argc,
      if (commandFile==NULL) {fputs ("Command File error",stderr); exit (1);}
      
      // obtain file size:
-     fseek (commandFile , 0 , SEEK_END);
+     if (fseek (commandFile , 0 , SEEK_END) != 0) {
+       perror("fseek");
+       fclose(commandFile);
+       exit(1);
+     }
      lSize = ftell (commandFile);
-     rewind (commandFile);
+     if (lSize < 0) {
+       perror("ftell");
+       fclose(commandFile);
+       exit(1);
+     }
+     if (fseek (commandFile , 0 , SEEK_SET) != 0) {
+       perror("fseek");
+       fclose(commandFile);
+       exit(1);
+     }
 
      // allocate memory to contain the whole file plus terminator:
-     commandBuffer = (char*) malloc (sizeof(char) * ((size_t)lSize + 1));
+     size_t commandSize = (size_t)lSize;
+     commandBuffer = (char*) malloc (sizeof(char) * (commandSize + 1));
      if (commandBuffer == NULL) {fputs ("Command Buffer memory error",stderr); exit (2);}
      
      // copy the file into the buffer:
-     result = fread (commandBuffer, 1, (size_t)lSize, commandFile);
-     if (result != (size_t)lSize) {fputs ("Command file reading error",stderr); exit (3);}
-     commandBuffer[lSize] = '\0';
+     result = fread (commandBuffer, 1, commandSize, commandFile);
+     if (result != commandSize) {fputs ("Command file reading error",stderr); exit (3);}
+     commandBuffer[commandSize] = '\0';
 
      /* the whole file is now loaded in the memory buffer. */
 

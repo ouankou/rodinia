@@ -520,7 +520,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		}
 		long long sum_time = get_time();
 		printf("TIME TO SUM WEIGHTS TOOK: %f\n", elapsed_time(exponential, sum_time));
-		if(sumWeights <= 0.0 || sumWeights != sumWeights || sumWeights > DBL_MAX){
+		if(sumWeights <= 0.0 || !isfinite(sumWeights)){
 			double uniform = 1.0 / (double) Nparticles;
 			for(x = 0; x < Nparticles; x++){
 				weights[x] = uniform;

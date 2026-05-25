@@ -443,7 +443,8 @@ BPNN *bpnn_read(const char *filename)
 {
   char *mem;
   BPNN *new;
-  int fd, n1, n2, n3, i, j, memcnt;
+  int fd, n1, n2, n3, i, j;
+  size_t memcnt;
 
   if ((fd = open(filename, O_RDONLY)) == -1) {
     return (NULL);
@@ -467,13 +468,14 @@ BPNN *bpnn_read(const char *filename)
   printf("Reading input weights...");  //fflush(stdout);
 
   memcnt = 0;
-  mem = (char *) malloc ((unsigned) ((n1+1) * (n2+1) * sizeof(float)));
+  size_t input_weight_bytes = ((size_t)n1 + 1) * ((size_t)n2 + 1) * sizeof(float);
+  mem = (char *) malloc (input_weight_bytes);
   if (mem == NULL) {
     bpnn_free(new);
     close(fd);
     return (NULL);
   }
-  if (read_full(fd, mem, (n1+1) * (n2+1) * sizeof(float)) != 0) {
+  if (read_full(fd, mem, input_weight_bytes) != 0) {
     free(mem);
     bpnn_free(new);
     close(fd);
@@ -490,13 +492,14 @@ BPNN *bpnn_read(const char *filename)
   printf("Done\nReading hidden weights...");  //fflush(stdout);
 
   memcnt = 0;
-  mem = (char *) malloc ((unsigned) ((n2+1) * (n3+1) * sizeof(float)));
+  size_t hidden_weight_bytes = ((size_t)n2 + 1) * ((size_t)n3 + 1) * sizeof(float);
+  mem = (char *) malloc (hidden_weight_bytes);
   if (mem == NULL) {
     bpnn_free(new);
     close(fd);
     return (NULL);
   }
-  if (read_full(fd, mem, (n2+1) * (n3+1) * sizeof(float)) != 0) {
+  if (read_full(fd, mem, hidden_weight_bytes) != 0) {
     free(mem);
     bpnn_free(new);
     close(fd);

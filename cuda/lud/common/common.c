@@ -146,7 +146,7 @@ matrix_multiply(float *inputa, float *inputb, float *output, int size){
 func_ret_t
 lud_verify(float *m, float *lu, int matrix_dim){
   int i,j,k;
-  float *tmp = (float*)malloc(matrix_dim*matrix_dim*sizeof(float));
+  float *tmp = (float*)malloc((size_t)matrix_dim * (size_t)matrix_dim * sizeof(float));
   func_ret_t ret = RET_SUCCESS;
 
   if (tmp == NULL) {

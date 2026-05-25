@@ -280,7 +280,7 @@ __global__ void normalize_weights_kernel(double * weights, int Nparticles, doubl
     __syncthreads();
     
     if (i < Nparticles) {
-        if (sumWeights <= 0.0 || sumWeights != sumWeights || sumWeights > DBL_MAX) {
+        if (sumWeights <= 0.0 || !isfinite(sumWeights)) {
             weights[i] = 1.0 / (double) Nparticles;
         } else {
             weights[i] = weights[i] / sumWeights;
