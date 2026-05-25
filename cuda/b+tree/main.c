@@ -735,9 +735,9 @@ transform_to_cuda(	node * root,
 	if(verbose){
 		for(i = 0; i < size; i++)
 			printf("%d ", krecords[i].value);
-		printf("\nNumber of records = %ld, sizeof(record)=%zu, total=%zu\n", size, sizeof(record), (size_t)size*sizeof(record));
-		printf("Number of knodes = %ld, sizeof(knode)=%zu, total=%zu\n", nodeindex, sizeof(knode), (size_t)nodeindex*sizeof(knode));
-		printf("\nDone Transformation. Mem used: %ld\n", mem_used);
+		printf("\nNumber of records = %ld, sizeof(record)=%zu, total=%zu\n", (long)size, sizeof(record), (size_t)size*sizeof(record));
+		printf("Number of knodes = %ld, sizeof(knode)=%zu, total=%zu\n", (long)nodeindex, sizeof(knode), (size_t)nodeindex*sizeof(knode));
+		printf("\nDone Transformation. Mem used: %ld\n", (long)mem_used);
 	}
 	gettimeofday (&two, NULL);
 	double oneD = one.tv_sec + (double)one.tv_usec * .000001;

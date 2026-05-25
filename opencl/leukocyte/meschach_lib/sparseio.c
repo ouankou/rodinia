@@ -31,6 +31,7 @@
 
 #include        <stdio.h>
 #include        <stdlib.h>
+#include        <limits.h>
 #include        <unistd.h>
 #include        "sparse.h"
 
@@ -245,15 +246,18 @@ SPMAT  *sp_finput(FILE *fp)
 		       -- using amortized doubling */
 		      if ( len >= scratch_len )
 			{
-			  {
-				    row_elt *new_scratch = scratch
-				      ? (row_elt *)realloc(scratch, (size_t)(2*scratch_len) * sizeof(row_elt))
-				      : (row_elt *)calloc((size_t)(2*scratch_len), sizeof(row_elt));
-			    if ( ! new_scratch )
-			      error(E_MEM,"sp_finput");
-			    scratch = new_scratch;
-			    scratch_len = 2*scratch_len;
-			  }
+				  {
+				    if ( scratch_len > INT_MAX / 2 )
+				      error(E_MEM,"sp_finput");
+				    size_t new_scratch_len = (size_t)2 * (size_t)scratch_len;
+					    row_elt *new_scratch = scratch
+					      ? (row_elt *)realloc(scratch, new_scratch_len * sizeof(row_elt))
+					      : (row_elt *)calloc(new_scratch_len, sizeof(row_elt));
+				    if ( ! new_scratch )
+				      error(E_MEM,"sp_finput");
+				    scratch = new_scratch;
+				    scratch_len = (int)new_scratch_len;
+				  }
 			}
 			do {  /* get an entry... */
 			    fprintf(stderr,"Entry %d: ",len);
@@ -336,13 +340,16 @@ SPMAT  *sp_finput(FILE *fp)
 		      if ( len >= scratch_len )
 			{
 			  {
+			    if ( scratch_len > INT_MAX / 2 )
+			      error(E_MEM,"sp_finput");
+			    size_t new_scratch_len = (size_t)2 * (size_t)scratch_len;
 			    row_elt *new_scratch = scratch
-			      ? (row_elt *)realloc(scratch, (size_t)(2*scratch_len) * sizeof(row_elt))
-			      : (row_elt *)calloc((size_t)(2*scratch_len), sizeof(row_elt));
+			      ? (row_elt *)realloc(scratch, new_scratch_len * sizeof(row_elt))
+			      : (row_elt *)calloc(new_scratch_len, sizeof(row_elt));
 			    if ( ! new_scratch )
 			      error(E_MEM,"sp_finput");
 			    scratch = new_scratch;
-			    scratch_len = 2*scratch_len;
+			    scratch_len = (int)new_scratch_len;
 			  }
 			}
 #if REAL == DOUBLE
