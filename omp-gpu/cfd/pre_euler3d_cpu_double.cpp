@@ -15,11 +15,7 @@ struct double3 {
 };
 
 #ifndef block_length
-#ifdef _OPENMP
-#error "you need to define block_length"
-#else
 #define block_length 1
-#endif
 #endif
 
 /*

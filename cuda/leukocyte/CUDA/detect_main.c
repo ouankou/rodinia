@@ -158,7 +158,7 @@ int main(int argc, char ** argv) {
 				Y = getsampling(Cy_temp, ns);
 				
 				Ix1 = linear_interp2(grad_x, X, Y);
-				Iy1 = linear_interp2(grad_x, X, Y);
+				Iy1 = linear_interp2(grad_y, X, Y);
 				Xs = getfdriv(Cx, ns);
 				Ys = getfdriv(Cy, ns);
 				

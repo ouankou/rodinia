@@ -74,6 +74,15 @@ void BFSGraph( int argc, char** argv)
 	bool *h_graph_mask = (bool*) malloc(sizeof(bool)*no_of_nodes);
 	bool *h_updating_graph_mask = (bool*) malloc(sizeof(bool)*no_of_nodes);
 	bool *h_graph_visited = (bool*) malloc(sizeof(bool)*no_of_nodes);
+	if (!h_graph_nodes || !h_graph_mask || !h_updating_graph_mask || !h_graph_visited) {
+		fprintf(stderr, "Error: Memory allocation failed\n");
+		fclose(fp);
+		free(h_graph_nodes);
+		free(h_graph_mask);
+		free(h_updating_graph_mask);
+		free(h_graph_visited);
+		return;
+	}
 
 	int start, edgeno;   
 	// initalize the memory
@@ -82,6 +91,10 @@ void BFSGraph( int argc, char** argv)
 		if (fscanf(fp,"%d %d",&start,&edgeno) != 2) {
 			fprintf(stderr, "Error reading node data\n");
 			fclose(fp);
+			free(h_graph_nodes);
+			free(h_graph_mask);
+			free(h_updating_graph_mask);
+			free(h_graph_visited);
 			return;
 		}
 		h_graph_nodes[i].starting = start;
@@ -95,6 +108,19 @@ void BFSGraph( int argc, char** argv)
 	if (fscanf(fp,"%d",&source) != 1) {
 		fprintf(stderr, "Error reading source node\n");
 		fclose(fp);
+		free(h_graph_nodes);
+		free(h_graph_mask);
+		free(h_updating_graph_mask);
+		free(h_graph_visited);
+		return;
+	}
+	if (source < 0 || source >= no_of_nodes) {
+		fprintf(stderr, "Error: source node %d is out of range [0, %d)\n", source, no_of_nodes);
+		fclose(fp);
+		free(h_graph_nodes);
+		free(h_graph_mask);
+		free(h_updating_graph_mask);
+		free(h_graph_visited);
 		return;
 	}
 	// source=0; //tesing code line
@@ -106,16 +132,44 @@ void BFSGraph( int argc, char** argv)
 	if (fscanf(fp,"%d",&edge_list_size) != 1) {
 		fprintf(stderr, "Error reading edge list size\n");
 		fclose(fp);
+		free(h_graph_nodes);
+		free(h_graph_mask);
+		free(h_updating_graph_mask);
+		free(h_graph_visited);
 		return;
 	}
 
 	int id,cost;
 	int* h_graph_edges = (int*) malloc(sizeof(int)*edge_list_size);
+	if (!h_graph_edges) {
+		fprintf(stderr, "Error: Memory allocation failed\n");
+		fclose(fp);
+		free(h_graph_nodes);
+		free(h_graph_mask);
+		free(h_updating_graph_mask);
+		free(h_graph_visited);
+		return;
+	}
 	for(int i=0; i < edge_list_size ; i++)
 	{
 		if (fscanf(fp,"%d",&id) != 1 || fscanf(fp,"%d",&cost) != 1) {
 			fprintf(stderr, "Error reading edge data\n");
 			fclose(fp);
+			free(h_graph_nodes);
+			free(h_graph_mask);
+			free(h_updating_graph_mask);
+			free(h_graph_visited);
+			free(h_graph_edges);
+			return;
+		}
+		if (id < 0 || id >= no_of_nodes) {
+			fprintf(stderr, "Error: edge target node %d is out of range [0, %d)\n", id, no_of_nodes);
+			fclose(fp);
+			free(h_graph_nodes);
+			free(h_graph_mask);
+			free(h_updating_graph_mask);
+			free(h_graph_visited);
+			free(h_graph_edges);
 			return;
 		}
 		h_graph_edges[i] = id;
@@ -127,6 +181,15 @@ void BFSGraph( int argc, char** argv)
 
 	// allocate mem for the result on host side
 	int* h_cost = (int*) malloc( sizeof(int)*no_of_nodes);
+	if (!h_cost) {
+		fprintf(stderr, "Error: Memory allocation failed\n");
+		free(h_graph_nodes);
+		free(h_graph_edges);
+		free(h_graph_mask);
+		free(h_updating_graph_mask);
+		free(h_graph_visited);
+		return;
+	}
 	for(int i=0;i<no_of_nodes;i++)
 		h_cost[i]=-1;
 	h_cost[source]=0;
@@ -209,6 +272,10 @@ void BFSGraph( int argc, char** argv)
 		}
 	}
 	FILE *fpo = fopen(output_path,"w");
+	if (fpo == NULL) {
+		fprintf(stderr, "Error opening output file '%s'\n", output_path);
+		exit(EXIT_FAILURE);
+	}
 	for(int i=0;i<no_of_nodes;i++)
 		fprintf(fpo,"%d) cost:%d\n",i,h_cost[i]);
 	fclose(fpo);

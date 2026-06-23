@@ -89,4 +89,10 @@ void bpnn_train_kernel(BPNN *net, float *eo, float *eh) {
     bpnn_adjust_weights(hidden_delta, hid, input_units, in, input_weights,
                         input_prev_weights);
   } /* end omp target data */
+  if (eo) {
+    *eo = out_err;
+  }
+  if (eh) {
+    *eh = hid_err;
+  }
 }

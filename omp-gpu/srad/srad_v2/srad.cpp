@@ -197,7 +197,12 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
+  double checksum = 0.0;
+  for (int idx = 0; idx < size_I; idx++) {
+    checksum += J[idx];
+  }
   printf("Computation Done\n");
+  printf("SRAD checksum: %.8f\n", checksum);
 
   free(I);
   free(J);

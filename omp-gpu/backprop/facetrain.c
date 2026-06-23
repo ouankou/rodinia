@@ -16,6 +16,8 @@ void backprop_face() {
   // entering the training kernel, only one iteration
   printf("Starting training kernel\n");
   bpnn_train_kernel(net, &out_err, &hid_err);
+  printf("Output error: %.8f\n", out_err);
+  printf("Hidden error: %.8f\n", hid_err);
   bpnn_free(net);
   printf("Training done\n");
 }

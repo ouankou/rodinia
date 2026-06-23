@@ -29,6 +29,7 @@ static int do_verify = 0;
 static struct option long_options[] = {
       /* name, has_arg, flag, val */
       {"input", 1, NULL, 'i'},
+      {"threads", 1, NULL, 'n'},
       {"size", 1, NULL, 's'},
       {"verify", 0, NULL, 'v'},
       {0,0,0,0}
@@ -47,7 +48,7 @@ main ( int argc, char *argv[] )
   float *m, *mm;
   stopwatch sw;
 
-  while ((opt = getopt_long(argc, argv, "::vs:i:",
+  while ((opt = getopt_long(argc, argv, "::vs:n:i:",
                             long_options, &option_index)) != -1 ) {
       switch(opt){
         case 'i':
@@ -56,11 +57,12 @@ main ( int argc, char *argv[] )
         case 'v':
           do_verify = 1;
           break;
+        case 'n':
+          /* Accepted for runner compatibility with openmp/lud_omp. */
+          break;
         case 's':
           matrix_dim = atoi(optarg);
-          fprintf(stderr, "Currently not supported, use -i instead\n");
-          fprintf(stderr, "Usage: %s [-v] [-s matrix_size|-i input_file]\n", argv[0]);
-          exit(EXIT_FAILURE);
+          break;
         case '?':
           fprintf(stderr, "invalid option\n");
           break;
@@ -68,14 +70,14 @@ main ( int argc, char *argv[] )
           fprintf(stderr, "missing argument\n");
           break;
         default:
-          fprintf(stderr, "Usage: %s [-v] [-s matrix_size|-i input_file]\n",
+          fprintf(stderr, "Usage: %s [-v] [-n no. of threads] [-s matrix_size|-i input_file]\n",
                   argv[0]);
           exit(EXIT_FAILURE);
       }
   }
 
   if ( (optind < argc) || (optind == 1)) {
-      fprintf(stderr, "Usage: %s [-v] [-s matrix_size|-i input_file]\n", argv[0]);
+      fprintf(stderr, "Usage: %s [-v] [-n no. of threads] [-s matrix_size|-i input_file]\n", argv[0]);
       exit(EXIT_FAILURE);
   }
 
@@ -87,6 +89,14 @@ main ( int argc, char *argv[] )
           fprintf(stderr, "error create matrix from file %s\n", input_file);
           exit(EXIT_FAILURE);
       }
+  } else if (matrix_dim) {
+    printf("Creating matrix internally size=%d\n", matrix_dim);
+    ret = create_matrix(&m, matrix_dim);
+    if (ret != RET_SUCCESS) {
+        m = NULL;
+        fprintf(stderr, "error create matrix internally size=%d\n", matrix_dim);
+        exit(EXIT_FAILURE);
+    }
   } else {
     printf("No input file specified!\n");
     exit(EXIT_FAILURE);
@@ -94,7 +104,6 @@ main ( int argc, char *argv[] )
 
   if (do_verify){
     printf("Before LUD\n");
-    print_matrix(m, matrix_dim);
     matrix_duplicate(m, &mm, matrix_dim);
   }
 
@@ -102,12 +111,21 @@ main ( int argc, char *argv[] )
       lud_openmp_gpu(m, matrix_dim);
       stopwatch_stop(&sw);
       printf("Time consumed(ms): %lf\n", 1000*get_interval_by_sec(&sw));
+      double checksum = 0.0;
+      long long matrix_elements = (long long)matrix_dim * (long long)matrix_dim;
+      for (long long i = 0; i < matrix_elements; i++) {
+        checksum += m[i];
+      }
+      printf("LUD checksum: %.8f\n", checksum);
 
   if (do_verify){
     printf("After LUD\n");
-    print_matrix(m, matrix_dim);
     printf(">>>Verify<<<<\n");
-    lud_verify(mm, m, matrix_dim);
+    if (lud_verify(mm, m, matrix_dim) != RET_SUCCESS) {
+      free(mm);
+      free(m);
+      return EXIT_FAILURE;
+    }
     free(mm);
   }
 

@@ -227,7 +227,7 @@ float roundFloat(float value) {
     if (value - newValue < .5)
         return newValue;
     else
-        return newValue++;
+        return newValue + 1;
 }
 
 /**

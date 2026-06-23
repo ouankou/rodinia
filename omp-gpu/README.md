@@ -7,6 +7,7 @@ can be built as regular OpenMP offload executables in this CMake tree.
 Selected benchmarks:
 
 - backprop
+- bfs
 - b+tree
 - cfd
 - heartwall
@@ -14,11 +15,15 @@ Selected benchmarks:
 - hotspot3D
 - kmeans
 - lavaMD
+- leukocyte
 - lud
+- myocyte
 - nn
 - nw
+- particlefilter
 - pathfinder
 - srad
+- streamcluster
 
 Configure with LLVM OpenMP offload:
 
@@ -46,4 +51,6 @@ scripts/run_omp_gpu.sh --build-dir build-omp-gpu
 ```
 
 The runner defaults to `OMP_TARGET_OFFLOAD=MANDATORY` and writes generated
-outputs under the build tree.
+outputs under the build tree. Benchmark-generated files should be written below
+`RODINIA_OUTPUT_DIR` or `RODINIA_BENCH_OUTPUT_DIR`, which the runner sets to a
+per-benchmark subdirectory of `<build-dir>/run_outputs/omp-gpu`.

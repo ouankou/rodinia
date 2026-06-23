@@ -7,7 +7,6 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 set(RODINIA_MATH_LIB m)
-set(RODINIA_OMP_GPU_CFD_BLOCK_LENGTH "216" CACHE STRING "CFD block_length for OpenMP GPU builds")
 
 set(RODINIA_OMP_GPU_EFFECTIVE_OFFLOAD_ARCH "${RODINIA_OMP_GPU_OFFLOAD_ARCH}")
 if(NOT RODINIA_OMP_GPU_EFFECTIVE_OFFLOAD_ARCH AND CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -70,6 +69,12 @@ rodinia_add_omp_gpu_executable(omp_gpu_backprop
     ${RODINIA_MATH_LIB}
 )
 
+rodinia_add_omp_gpu_executable(omp_gpu_bfs
+  OUTPUT_NAME bfs
+  SOURCES bfs/bfs.cpp
+  LIBS ${RODINIA_OMP_GPU_LIBS}
+)
+
 rodinia_add_omp_gpu_executable(omp_gpu_bplustree
   OUTPUT_NAME b+tree.out
   SOURCES
@@ -86,28 +91,24 @@ rodinia_add_omp_gpu_executable(omp_gpu_bplustree
 rodinia_add_omp_gpu_executable(omp_gpu_cfd_euler3d_cpu
   OUTPUT_NAME euler3d_cpu
   SOURCES cfd/euler3d_cpu.cpp
-  DEFINES block_length=${RODINIA_OMP_GPU_CFD_BLOCK_LENGTH}
   LIBS ${RODINIA_OMP_GPU_LIBS}
 )
 
 rodinia_add_omp_gpu_executable(omp_gpu_cfd_euler3d_cpu_double
   OUTPUT_NAME euler3d_cpu_double
   SOURCES cfd/euler3d_cpu_double.cpp
-  DEFINES block_length=${RODINIA_OMP_GPU_CFD_BLOCK_LENGTH}
   LIBS ${RODINIA_OMP_GPU_LIBS}
 )
 
 rodinia_add_omp_gpu_executable(omp_gpu_cfd_pre_euler3d_cpu
   OUTPUT_NAME pre_euler3d_cpu
   SOURCES cfd/pre_euler3d_cpu.cpp
-  DEFINES block_length=${RODINIA_OMP_GPU_CFD_BLOCK_LENGTH}
   LIBS ${RODINIA_OMP_GPU_LIBS}
 )
 
 rodinia_add_omp_gpu_executable(omp_gpu_cfd_pre_euler3d_cpu_double
   OUTPUT_NAME pre_euler3d_cpu_double
   SOURCES cfd/pre_euler3d_cpu_double.cpp
-  DEFINES block_length=${RODINIA_OMP_GPU_CFD_BLOCK_LENGTH}
   LIBS ${RODINIA_OMP_GPU_LIBS}
 )
 
@@ -161,6 +162,32 @@ rodinia_add_omp_gpu_executable(omp_gpu_lavaMD
     ${RODINIA_MATH_LIB}
 )
 
+include(${CMAKE_SOURCE_DIR}/cmake/MeschachSources.cmake)
+set(RODINIA_OMP_GPU_MESCHACH_SOURCES)
+foreach(source_file IN LISTS RODINIA_MESCHACH_SOURCE_FILES)
+  list(APPEND RODINIA_OMP_GPU_MESCHACH_SOURCES "${CMAKE_SOURCE_DIR}/openmp/leukocyte/meschach_lib/${source_file}")
+endforeach()
+add_library(omp_gpu_leukocyte_meschach STATIC ${RODINIA_OMP_GPU_MESCHACH_SOURCES})
+target_include_directories(omp_gpu_leukocyte_meschach PRIVATE ${CMAKE_SOURCE_DIR}/openmp/leukocyte/meschach_lib)
+
+rodinia_add_omp_gpu_executable(omp_gpu_leukocyte
+  OUTPUT_NAME leukocyte
+  SOURCES
+    leukocyte/OpenMP/detect_main.c
+    leukocyte/OpenMP/avilib.c
+    leukocyte/OpenMP/find_ellipse.c
+    leukocyte/OpenMP/track_ellipse.c
+    leukocyte/OpenMP/misc_math.c
+  INCLUDES
+    leukocyte/OpenMP
+    ${CMAKE_SOURCE_DIR}/openmp/leukocyte/meschach_lib
+  LIBS
+    omp_gpu_leukocyte_meschach
+    ${RODINIA_OMP_GPU_LIBS}
+    ${RODINIA_MATH_LIB}
+    Threads::Threads
+)
+
 rodinia_add_omp_gpu_executable(omp_gpu_lud
   OUTPUT_NAME lud_omp_gpu
   SOURCES
@@ -168,6 +195,14 @@ rodinia_add_omp_gpu_executable(omp_gpu_lud
     lud/openmp-gpu/lud_openmp_gpu.c
     lud/common/common.c
   INCLUDES lud/common
+  LIBS
+    ${RODINIA_OMP_GPU_LIBS}
+    ${RODINIA_MATH_LIB}
+)
+
+rodinia_add_omp_gpu_executable(omp_gpu_myocyte
+  OUTPUT_NAME myocyte.out
+  SOURCES myocyte/main.c
   LIBS
     ${RODINIA_OMP_GPU_LIBS}
     ${RODINIA_MATH_LIB}
@@ -187,6 +222,14 @@ rodinia_add_omp_gpu_executable(omp_gpu_nw
   LIBS ${RODINIA_OMP_GPU_LIBS}
 )
 
+rodinia_add_omp_gpu_executable(omp_gpu_particlefilter
+  OUTPUT_NAME particle_filter
+  SOURCES particlefilter/ex_particle_OPENMP_seq.c
+  LIBS
+    ${RODINIA_OMP_GPU_LIBS}
+    ${RODINIA_MATH_LIB}
+)
+
 rodinia_add_omp_gpu_executable(omp_gpu_pathfinder
   OUTPUT_NAME pathfinder
   SOURCES pathfinder/pathfinder.c
@@ -199,6 +242,12 @@ rodinia_add_omp_gpu_executable(omp_gpu_srad_v1
   LIBS
     ${RODINIA_OMP_GPU_LIBS}
     ${RODINIA_MATH_LIB}
+)
+
+rodinia_add_omp_gpu_executable(omp_gpu_streamcluster
+  OUTPUT_NAME sc_omp
+  SOURCES streamcluster/streamcluster_omp.cpp
+  LIBS ${RODINIA_OMP_GPU_LIBS}
 )
 
 rodinia_add_omp_gpu_executable(omp_gpu_srad_v2

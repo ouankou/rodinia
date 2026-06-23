@@ -174,7 +174,7 @@ int main(int argc, char ** argv) {
 				Y = getsampling(Cy_temp, ns);
 				
 				Ix1 = linear_interp2(grad_x, X, Y);
-				Iy1 = linear_interp2(grad_x, X, Y);
+				Iy1 = linear_interp2(grad_y, X, Y);
 				Xs = getfdriv(Cx, ns);
 				Ys = getfdriv(Cy, ns);
 				
@@ -234,6 +234,7 @@ int main(int argc, char ** argv) {
 	m_free(celly);
 	m_free(cellx);
 	m_free(img_dilated);
+	m_free(strel);
 	m_free(max_gicov);
 	m_free(gicov);
 	m_free(grad_y);
@@ -261,5 +262,8 @@ int main(int argc, char ** argv) {
 	// Report total program execution time
     printf("\nTotal application run time: %.5f seconds\n", ((float) (get_time() - program_start_time)) / (1000*1000));
 
+	free(QAX_CENTERS);
+	free(QAY_CENTERS);
+	AVI_close(cell_file);
 	return 0;
 }

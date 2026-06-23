@@ -59,7 +59,7 @@ static char id_str[MAX_INFO_STRLEN];
 
 static size_t avi_read(int fd, char *buf, size_t len)
 {
-   size_t n = 0;
+   ssize_t n = 0;
    size_t r = 0;
 
    while (r < len) {
@@ -67,22 +67,24 @@ static size_t avi_read(int fd, char *buf, size_t len)
 
       if (n <= 0)
 	  return r;
-      r += n;
+      r += (size_t)n;
    }
 
    return r;
 }
 
-static size_t avi_write (int fd, char *buf, size_t len)
+static ssize_t avi_write (int fd, char *buf, size_t len)
 {
-   size_t n = 0;
-   size_t r = 0;
+   ssize_t n = 0;
+   ssize_t r = 0;
 
-   while (r < len) {
-      n = write (fd, buf + r, len - r);
+   while ((size_t)r < len) {
+      n = write (fd, buf + r, len - (size_t)r);
       if (n < 0)
          return n;
-      
+      if (n == 0)
+         return r;
+
       r += n;
    }
    return r;
@@ -1058,8 +1060,11 @@ int AVI_close(avi_t *AVI)
    close(AVI->fdes);
    if(AVI->idx) free(AVI->idx);
    if(AVI->video_index) free(AVI->video_index);
-   //FIXME
-   //if(AVI->audio_index) free(AVI->audio_index);
+   long audio_tracks = AVI->anum;
+   if(audio_tracks > AVI_MAX_TRACKS) audio_tracks = AVI_MAX_TRACKS;
+   for(long j=0; j<audio_tracks; ++j) {
+      if(AVI->track[j].audio_index) free(AVI->track[j].audio_index);
+   }
    free(AVI);
 
    return ret;
