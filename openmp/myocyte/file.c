@@ -95,8 +95,8 @@ void read_file(	char* filename,
 
 	fid = fopen(filename, "r");
 	if( fid == NULL ){
-		printf( "The file was not opened for reading\n" );
-		return;
+		fprintf(stderr, "Error: The file '%s' could not be opened for reading\n", filename);
+		exit(EXIT_FAILURE);
 	}
 
 	//=====================================================================

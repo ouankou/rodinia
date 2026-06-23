@@ -182,8 +182,14 @@ void ellipsetrack(avi_t *video, double *xc0, double *yc0, int Nc, int R, int Np,
 			
 			// Free temporary memory
 			m_free(IMGVF);
+			m_free(IE);
+			m_free(Iy);
+			m_free(Ix);
+			m_free(Isub);
 			free(ri);
 	    }
+
+		m_free(I);
 
 #ifdef OUTPUT
 		if (frame_num == Nf)

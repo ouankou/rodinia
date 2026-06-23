@@ -17,7 +17,7 @@ float dev_round_float(float value) {
     if (value - newValue < .5f)
         return newValue;
     else
-        return newValue++;
+        return newValue + 1;
 }
 
 

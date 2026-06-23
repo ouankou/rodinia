@@ -8,10 +8,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <limits.h>
+#include <stdio.h>
 
 #include "AVI/avilib.h"
 #include "AVI/avimod.h"
 #include <omp.h>
+
+#define OUTPUT
 
 #include "define.h"
 #include "kernel.c"
@@ -36,7 +40,21 @@ void write_data(char *filename, int frameNo, int frames_processed,
   //	OPEN FILE FOR READING
   //================================================================================80
 
-  fid = fopen(filename, "w+");
+  char output_path[PATH_MAX];
+  const char *output_file = filename;
+  const char *output_dir = getenv("RODINIA_OUTPUT_DIR");
+  if (output_dir && output_dir[0] != '\0') {
+    int written = snprintf(output_path, sizeof(output_path), "%s/%s", output_dir,
+                           filename);
+    if (written > 0 && (size_t)written < sizeof(output_path)) {
+      output_file = output_path;
+    } else {
+      fprintf(stderr, "Output path is too long for '%s'\n", output_file);
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  fid = fopen(output_file, "w+");
   if (fid == NULL) {
     printf("The file was not opened for writing\n");
     return;
@@ -626,7 +644,7 @@ int main(int argc, char *argv[]) {
   //	DUMP DATA TO FILE
   //==================================================50
 #ifdef OUTPUT
-  write_data("result.log", public.frames, frames_processed, public.endoPoints,
+  write_data("result.txt", public.frames, frames_processed, public.endoPoints,
              public.h_tEndoRowLoc, public.h_tEndoColLoc, public.epiPoints,
              public.h_tEpiRowLoc, public.h_tEpiColLoc);
 

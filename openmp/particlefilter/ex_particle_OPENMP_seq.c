@@ -1,7 +1,7 @@
 /**
  * @file ex_particle_OPENMP_seq.c
  * @author Michael Trotter & Matt Goodrum
- * @brief Particle filter implementation in C/OpenMP 
+ * @brief Particle filter implementation in C/OpenMP
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,19 +12,11 @@
 #include <omp.h>
 #include <float.h>
 #include <limits.h>
+#include <stdint.h>
 #define PI 3.1415926535897932
-/**
-@var M value for Linear Congruential Generator (LCG); use GCC's value
-*/
-long M = INT_MAX;
-/**
-@var A value for LCG
-*/
-int A = 1103515245;
-/**
-@var C value for LCG
-*/
-int C = 12345;
+#define LCG_M INT_MAX
+#define LCG_A 1103515245
+#define LCG_C 12345
 /*****************************
 *GET_TIME
 *returns a long int representing the time
@@ -38,16 +30,27 @@ long long get_time() {
 float elapsed_time(long long start_time, long long end_time) {
         return (float) (end_time - start_time) / (1000 * 1000);
 }
-/** 
-* Takes in a double and returns an integer that approximates to that double
-* @return if the mantissa < .5 => return value < input value; else return value > input value
+
+static int checked_mul_size(size_t a, size_t b, size_t *result) {
+	if (a != 0 && b > SIZE_MAX / a) {
+		return -1;
+	}
+	*result = a * b;
+	return 0;
+}
+
+static void *checked_malloc_array(size_t count, size_t elem_size) {
+	size_t bytes;
+	if (checked_mul_size(count, elem_size, &bytes) != 0) {
+		return NULL;
+	}
+	return malloc(bytes);
+}
+/**
+* Takes in a double and returns the nearest integer value.
 */
 double roundDouble(double value){
-	int newValue = (int)(value);
-	if(value - newValue < .5)
-	return newValue;
-	else
-	return newValue++;
+	return round(value);
 }
 /**
 * Set values of the 3D array to a newValue if that value is equal to the testValue
@@ -79,10 +82,13 @@ void setIf(int testValue, int newValue, int * array3D, int * dimX, int * dimY, i
 */
 double randu(int * seed, int index)
 {
-	int num = A*seed[index] + C;
-	seed[index] = num % M;
-	double value = fabs(seed[index]/((double) M));
-	return value == 0.0 ? 1.0 / (double)M : value;
+	uint32_t wrapped = (uint32_t)LCG_A * (uint32_t)seed[index] + (uint32_t)LCG_C;
+	int64_t signed_wrapped = wrapped <= (uint32_t)INT32_MAX
+		? (int64_t)wrapped
+		: -((int64_t)(UINT32_MAX - wrapped) + 1);
+	seed[index] = (int)(signed_wrapped % LCG_M);
+	double value = fabs(seed[index]/((double) LCG_M));
+	return value == 0.0 ? 1.0 / (double)LCG_M : value;
 }
 /**
 * Generates a normally distributed random number using the Box-Muller transformation
@@ -238,7 +244,7 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 	int x0 = (int)roundDouble(IszY/2.0);
 	int y0 = (int)roundDouble(IszX/2.0);
 	I[x0 *IszY *Nfr + y0 * Nfr  + 0] = 1;
-	
+
 	/*move point*/
 	int xk, yk, pos;
 	for(k = 1; k < Nfr; k++){
@@ -262,7 +268,7 @@ void videoSequence(int * I, int IszX, int IszY, int Nfr, int * seed){
 		}
 	}
 	free(newMatrix);
-	
+
 	/*define background, add noise*/
 	setIf(0, 100, I, &IszX, &IszY, &Nfr);
 	setIf(1, 228, I, &IszX, &IszY, &Nfr);
@@ -351,8 +357,11 @@ int findIndexBin(double * CDF, int beginIndex, int endIndex, double value){
 */
 void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparticles){
 
-	size_t total_size = (size_t)IszX * (size_t)IszY * (size_t)Nfr;
-	if (total_size > INT_MAX) {
+	size_t frame_size;
+	size_t total_size;
+	if (checked_mul_size((size_t)IszX, (size_t)IszY, &frame_size) != 0 ||
+	    checked_mul_size(frame_size, (size_t)Nfr, &total_size) != 0 ||
+	    total_size > INT_MAX) {
 		fprintf(stderr, "Video sequence is too large for int indexing\n");
 		exit(EXIT_FAILURE);
 	}
@@ -361,11 +370,20 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	//original particle centroid
 	double xe = roundDouble(IszY/2.0);
 	double ye = roundDouble(IszX/2.0);
-	
+
 	//expected object locations, compared to center
 	int radius = 5;
 	int diameter = radius*2 - 1;
-	int * disk = (int *)malloc(diameter*diameter*sizeof(int));
+	size_t disk_size;
+	if (checked_mul_size((size_t)diameter, (size_t)diameter, &disk_size) != 0) {
+		fprintf(stderr, "Error: Structuring element is too large\n");
+		exit(EXIT_FAILURE);
+	}
+	int * disk = (int *)checked_malloc_array(disk_size, sizeof(int));
+	if (disk == NULL) {
+		fprintf(stderr, "Error: Memory allocation failed for structuring element\n");
+		exit(EXIT_FAILURE);
+	}
 	strelDisk(disk, radius);
 	int countOnes = 0;
 	int x, y;
@@ -375,35 +393,77 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 				countOnes++;
 		}
 	}
-	double * objxy = (double *)malloc(countOnes*2*sizeof(double));
+	size_t objxy_size;
+	if (checked_mul_size((size_t)countOnes, 2, &objxy_size) != 0) {
+		fprintf(stderr, "Error: Object neighborhood is too large\n");
+		free(disk);
+		exit(EXIT_FAILURE);
+	}
+	double * objxy = (double *)checked_malloc_array(objxy_size, sizeof(double));
+	if (objxy == NULL) {
+		fprintf(stderr, "Error: Memory allocation failed for object neighborhood\n");
+		free(disk);
+		exit(EXIT_FAILURE);
+	}
 	getneighbors(disk, countOnes, objxy, radius);
-	
+
 	long long get_neighbors = get_time();
 	printf("TIME TO GET NEIGHBORS TOOK: %f\n", elapsed_time(start, get_neighbors));
 	//initial weights are all equal (1/Nparticles)
-	double * weights = (double *)malloc(sizeof(double)*Nparticles);
+	size_t particle_count = (size_t)Nparticles;
+	double * weights = (double *)checked_malloc_array(particle_count, sizeof(double));
+	//initial likelihood to 0.0
+	double * likelihood = (double *)checked_malloc_array(particle_count, sizeof(double));
+	double * arrayX = (double *)checked_malloc_array(particle_count, sizeof(double));
+	double * arrayY = (double *)checked_malloc_array(particle_count, sizeof(double));
+	double * xj = (double *)checked_malloc_array(particle_count, sizeof(double));
+	double * yj = (double *)checked_malloc_array(particle_count, sizeof(double));
+	double * CDF = (double *)checked_malloc_array(particle_count, sizeof(double));
+	double * u = (double *)checked_malloc_array(particle_count, sizeof(double));
+	size_t ind_size;
+	if (checked_mul_size((size_t)countOnes, particle_count, &ind_size) != 0) {
+		fprintf(stderr, "Error: Particle index array is too large\n");
+		free(disk);
+		free(objxy);
+		free(weights);
+		free(likelihood);
+		free(arrayX);
+		free(arrayY);
+		free(xj);
+		free(yj);
+		free(CDF);
+		free(u);
+		exit(EXIT_FAILURE);
+	}
+	int * ind = (int*)checked_malloc_array(ind_size, sizeof(int));
+	if (!weights || !likelihood || !arrayX || !arrayY || !xj || !yj || !CDF || !u || !ind) {
+		fprintf(stderr, "Error: Memory allocation failed in particleFilter\n");
+		free(disk);
+		free(objxy);
+		free(weights);
+		free(likelihood);
+		free(arrayX);
+		free(arrayY);
+		free(xj);
+		free(yj);
+		free(CDF);
+		free(u);
+		free(ind);
+		exit(EXIT_FAILURE);
+	}
 	#pragma omp parallel for shared(weights, Nparticles) private(x)
 	for(x = 0; x < Nparticles; x++){
 		weights[x] = 1/((double)(Nparticles));
 	}
 	long long get_weights = get_time();
 	printf("TIME TO GET WEIGHTSTOOK: %f\n", elapsed_time(get_neighbors, get_weights));
-	//initial likelihood to 0.0
-	double * likelihood = (double *)malloc(sizeof(double)*Nparticles);
-	double * arrayX = (double *)malloc(sizeof(double)*Nparticles);
-	double * arrayY = (double *)malloc(sizeof(double)*Nparticles);
-	double * xj = (double *)malloc(sizeof(double)*Nparticles);
-	double * yj = (double *)malloc(sizeof(double)*Nparticles);
-	double * CDF = (double *)malloc(sizeof(double)*Nparticles);
-	double * u = (double *)malloc(sizeof(double)*Nparticles);
-	int * ind = (int*)malloc(sizeof(int)*countOnes*Nparticles);
 	#pragma omp parallel for shared(arrayX, arrayY, xe, ye) private(x)
 	for(x = 0; x < Nparticles; x++){
 		arrayX[x] = xe;
 		arrayY[x] = ye;
 	}
 	int k;
-	
+
 	printf("TIME TO SET ARRAYS TOOK: %f\n", elapsed_time(get_weights, get_time()));
 	int indX, indY;
 	for(k = 1; k < Nfr; k++){
@@ -424,7 +484,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 			//compute the likelihood: remember our assumption is that you know
 			// foreground and the background image intensity distribution.
 			// Notice that we consider here a likelihood ratio, instead of
-			// p(z|x). It is possible in this case. why? a hometask for you.		
+			// p(z|x). It is possible in this case. why? a hometask for you.
 			//calc ind
 			for(y = 0; y < countOnes; y++){
 				indX = roundDouble(arrayX[x]) + objxy[y*2 + 1];
@@ -477,12 +537,12 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		double distance = sqrt( pow((double)(xe-(int)roundDouble(IszY/2.0)),2) + pow((double)(ye-(int)roundDouble(IszX/2.0)),2) );
 		printf("%lf\n", distance);
 		//display(hold off for now)
-		
+
 		//pause(hold off for now)
-		
+
 		//resampling
-		
-		
+
+
 		CDF[0] = weights[0];
 		for(x = 1; x < Nparticles; x++){
 			CDF[x] = weights[x] + CDF[x-1];
@@ -497,7 +557,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 		long long u_time = get_time();
 		printf("TIME TO CALC U TOOK: %f\n", elapsed_time(cum_sum, u_time));
 		int j, i;
-		
+
 		#pragma omp parallel for shared(CDF, Nparticles, xj, yj, u, arrayX, arrayY) private(i, j)
 		for(j = 0; j < Nparticles; j++){
 			i = findIndex(CDF, Nparticles, u[j]);
@@ -505,11 +565,11 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 				i = Nparticles-1;
 			xj[j] = arrayX[i];
 			yj[j] = arrayY[i];
-			
+
 		}
 		long long xyj_time = get_time();
 		printf("TIME TO CALC NEW ARRAY X AND Y TOOK: %f\n", elapsed_time(u_time, xyj_time));
-		
+
 		//#pragma omp parallel for shared(weights, Nparticles) private(x)
 		for(x = 0; x < Nparticles; x++){
 			//reassign arrayX and arrayY
@@ -533,7 +593,7 @@ void particleFilter(int * I, int IszX, int IszY, int Nfr, int * seed, int Nparti
 	free(ind);
 }
 int main(int argc, char * argv[]){
-	
+
 	char* usage = "openmp.out -x <dimX> -y <dimY> -z <Nfr> -np <Nparticles>";
 	//check number of arguments
 	if(argc != 9)
@@ -546,59 +606,91 @@ int main(int argc, char * argv[]){
 		printf( "%s\n",usage );
 		return 0;
 	}
-	
+
 	int IszX, IszY, Nfr, Nparticles;
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[2], "%d", &IszX ) == EOF ) {
 	   printf("ERROR: dimX input is incorrect");
 	   return 0;
 	}
-	
+
 	if( IszX <= 0 ) {
 		printf("dimX must be > 0\n");
 		return 0;
 	}
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[4], "%d", &IszY ) == EOF ) {
 	   printf("ERROR: dimY input is incorrect");
 	   return 0;
 	}
-	
+
 	if( IszY <= 0 ) {
 		printf("dimY must be > 0\n");
 		return 0;
 	}
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[6], "%d", &Nfr ) == EOF ) {
 	   printf("ERROR: Number of frames input is incorrect");
 	   return 0;
 	}
-	
+
 	if( Nfr <= 0 ) {
 		printf("number of frames must be > 0\n");
 		return 0;
 	}
-	
+
 	//converting a string to a integer
 	if( sscanf( argv[8], "%d", &Nparticles ) == EOF ) {
 	   printf("ERROR: Number of particles input is incorrect");
 	   return 0;
 	}
-	
+
 	if( Nparticles <= 0 ) {
 		printf("Number of particles must be > 0\n");
 		return 0;
 	}
+	size_t particle_count = (size_t)Nparticles;
+	if (particle_count > SIZE_MAX / sizeof(int)) {
+		fprintf(stderr, "Error: Number of particles is too large\n");
+		return 1;
+	}
 	//establish seed
-	int * seed = (int *)malloc(sizeof(int)*Nparticles);
+	int * seed = (int *)malloc(sizeof(int)*particle_count);
+	if (seed == NULL) {
+		fprintf(stderr, "Error: Memory allocation failed for particle seeds\n");
+		return 1;
+	}
 	int i;
 	for(i = 0; i < Nparticles; i++)
 		seed[i] = i + 1;
 	//malloc matrix
-	int * I = (int *)calloc(IszX*IszY*Nfr, sizeof(int));
+	size_t total_size = (size_t)IszX;
+	if ((size_t)IszY > SIZE_MAX / total_size) {
+		fprintf(stderr, "Error: Video sequence is too large\n");
+		free(seed);
+		return 1;
+	}
+	total_size *= (size_t)IszY;
+	if ((size_t)Nfr > SIZE_MAX / total_size) {
+		fprintf(stderr, "Error: Video sequence is too large\n");
+		free(seed);
+		return 1;
+	}
+	total_size *= (size_t)Nfr;
+	if (total_size > (size_t)INT_MAX || total_size > SIZE_MAX / sizeof(int)) {
+		fprintf(stderr, "Error: Video sequence is too large\n");
+		free(seed);
+		return 1;
+	}
+	int * I = (int *)calloc(total_size, sizeof(int));
+	if (I == NULL) {
+		fprintf(stderr, "Error: Memory allocation failed for video matrix\n");
+		free(seed);
+		return 1;
+	}
 	long long start = get_time();
 	//call video sequence
 	videoSequence(I, IszX, IszY, Nfr, seed);
@@ -609,7 +701,7 @@ int main(int argc, char * argv[]){
 	long long endParticleFilter = get_time();
 	printf("PARTICLE FILTER TOOK %f\n", elapsed_time(endVideoSequence, endParticleFilter));
 	printf("ENTIRE PROGRAM TOOK %f\n", elapsed_time(start, endParticleFilter));
-	
+
 	free(seed);
 	free(I);
 	return 0;

@@ -87,6 +87,13 @@ create_matrix_from_random(float **mp, int size){
       return RET_FAILURE;
   }
 
+  m = (float*)malloc(size*size*sizeof(float));
+  if ( m == NULL) {
+      free(l);
+      free(u);
+      return RET_FAILURE;
+  }
+
   for (i = 0; i < size; i++) {
       for (j=0; j < size; j++) {
           if (i>j) {
@@ -111,8 +118,9 @@ create_matrix_from_random(float **mp, int size){
 
   for (i=0; i < size; i++) {
       for (j=0; j < size; j++) {
+          m[i*size+j] = 0.0f;
           for (k=0; k <= MIN(i,j); k++)
-            m[i*size+j] = l[i*size+k] * u[j*size+k];
+            m[i*size+j] += l[i*size+k] * u[j*size+k];
       }
   }
 
@@ -121,6 +129,46 @@ create_matrix_from_random(float **mp, int size){
 
   *mp = m;
 
+  return RET_SUCCESS;
+}
+
+// Generate well-conditioned matrix internally by Ke Wang 2013/08/07 22:20:06
+func_ret_t
+create_matrix(float **mp, int size){
+  float *m;
+  int i,j;
+  float lamda = -0.001;
+  float *coe = (float *)malloc(sizeof(float)*(2*size-1));
+  float coe_i =0.0;
+
+  if (coe == NULL) {
+      return RET_FAILURE;
+  }
+
+  for (i=0; i < size; i++)
+    {
+      coe_i = 10*exp(lamda*i);
+      j=size-1+i;
+      coe[j]=coe_i;
+      j=size-1-i;
+      coe[j]=coe_i;
+    }
+
+  m = (float*) malloc(sizeof(float)*size*size);
+  if ( m == NULL) {
+      free(coe);
+      return RET_FAILURE;
+  }
+
+  for (i=0; i < size; i++) {
+      for (j=0; j < size; j++) {
+        m[i*size+j]=coe[size-1-i+j];
+      }
+  }
+
+  *mp = m;
+
+  free(coe);
   return RET_SUCCESS;
 }
 
@@ -159,28 +207,6 @@ lud_verify(float *m, float *lu, int matrix_dim){
         }
         tmp[i*matrix_dim+j] = sum;
     }
-  printf(">>>>>LU<<<<<<<\n");
-  for (i=0; i<matrix_dim; i++){
-    for (j=0; j<matrix_dim;j++){
-        printf("%f ", lu[i*matrix_dim+j]);
-    }
-    printf("\n");
-  }
-  printf(">>>>>result<<<<<<<\n");
-  for (i=0; i<matrix_dim; i++){
-    for (j=0; j<matrix_dim;j++){
-        printf("%f ", tmp[i*matrix_dim+j]);
-    }
-    printf("\n");
-  }
-  printf(">>>>>input<<<<<<<\n");
-  for (i=0; i<matrix_dim; i++){
-    for (j=0; j<matrix_dim;j++){
-        printf("%f ", m[i*matrix_dim+j]);
-    }
-    printf("\n");
-  }
-
   for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim; j++){
           if ( fabs(m[i*matrix_dim+j]-tmp[i*matrix_dim+j]) > 0.0001) {

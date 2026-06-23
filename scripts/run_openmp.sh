@@ -8,7 +8,10 @@ else
   BUILD_DIR="${ROOT_DIR}/build-omp-clang"
 fi
 OUT_DIR=""
-THREADS=32
+default_threads() {
+  getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || echo 1
+}
+THREADS="${RODINIA_OPENMP_THREADS:-$(default_threads)}"
 RUN_MUMMERGPU=1
 ONLY=()
 
@@ -19,7 +22,7 @@ Usage: scripts/run_openmp.sh [options]
 Options:
   --build-dir <path>   CMake build directory (default: build-omp-clang)
   --output-dir <path>  Output directory for generated files (default: <build-dir>/run_outputs/omp)
-  --threads <n>        OpenMP thread count to use (default: 32)
+  --threads <n>        OpenMP thread count to use (default: online CPU count)
   --only <name>        Run only the named benchmark (repeatable)
   --skip-mummergpu     Skip mummergpu even if built
   -h, --help           Show this help
@@ -203,7 +206,7 @@ fi
 
 if should_run myocyte; then
   require_bin myocyte.out
-  run_cmd myocyte "${ROOT_DIR}/openmp/myocyte" "${BIN_DIR}/myocyte.out 100 1 0 ${THREADS}"
+  run_cmd myocyte "${ROOT_DIR}/openmp/myocyte" "${BIN_DIR}/myocyte.out 100 32 1 ${THREADS}"
 fi
 
 if should_run nn; then

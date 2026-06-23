@@ -15,7 +15,7 @@ double dev_round_double(double value) {
     if (value - newValue < .5f)
         return newValue;
     else
-        return newValue++;
+        return newValue + 1;
 }
 
 

@@ -218,16 +218,11 @@ __device__ int findIndexBin(double * CDF, int beginIndex, int endIndex, double v
     return -1;
 }
 
-/** added this function. was missing in original double version.
- * Takes in a double and returns an integer that approximates to that double
- * @return if the mantissa < .5 => return value < input value; else return value > input value
+/**
+ * Takes in a double and returns the nearest integer value.
  */
 __device__ double dev_round_double(double value) {
-    int newValue = (int) (value);
-    if (value - newValue < .5f)
-        return newValue;
-    else
-        return newValue++;
+    return round(value);
 }
 
 /*****************************
@@ -406,16 +401,11 @@ __global__ void likelihood_kernel(double * arrayX, double * arrayY, double * xj,
     
 }
 
-/** 
- * Takes in a double and returns an integer that approximates to that double
- * @return if the mantissa < .5 => return value < input value; else return value > input value
+/**
+ * Takes in a double and returns the nearest integer value.
  */
 double roundDouble(double value) {
-    int newValue = (int) (value);
-    if (value - newValue < .5)
-        return newValue;
-    else
-        return newValue++;
+    return round(value);
 }
 
 /**

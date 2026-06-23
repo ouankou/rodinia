@@ -134,16 +134,11 @@ __global__ void kernel(double * arrayX, double * arrayY, double * CDF, double * 
 		
 	}
 }
-/** 
-* Takes in a double and returns an integer that approximates to that double
-* @return if the mantissa < .5 => return value < input value; else return value > input value
+/**
+* Takes in a double and returns the nearest integer value.
 */
 double roundDouble(double value){
-	int newValue = (int)(value);
-	if(value - newValue < .5)
-	return newValue;
-	else
-	return newValue++;
+	return round(value);
 }
 /**
 * Set values of the 3D array to a newValue if that value is equal to the testValue

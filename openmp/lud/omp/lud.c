@@ -48,8 +48,8 @@ main ( int argc, char *argv[] )
   float *m, *mm;
   stopwatch sw;
 
-	
-  while ((opt = getopt_long(argc, argv, "::vs:n:i:", 
+
+  while ((opt = getopt_long(argc, argv, "::vs:n:i:",
                             long_options, &option_index)) != -1 ) {
     switch(opt){
     case 'i':
@@ -80,7 +80,7 @@ main ( int argc, char *argv[] )
       exit(EXIT_FAILURE);
     }
   }
-  
+
   if ( (optind < argc) || (optind == 1)) {
     fprintf(stderr, "Usage: %s [-v] [-n no. of threads] [-s matrix_size|-i input_file]\n", argv[0]);
     exit(EXIT_FAILURE);
@@ -104,11 +104,11 @@ main ( int argc, char *argv[] )
       exit(EXIT_FAILURE);
     }
   }
- 
+
   else {
     printf("No input file specified!\n");
     exit(EXIT_FAILURE);
-  } 
+  }
 
   if (do_verify){
     printf("Before LUD\n");
@@ -121,15 +121,21 @@ main ( int argc, char *argv[] )
   lud_omp(m, matrix_dim);
   stopwatch_stop(&sw);
   printf("Time consumed(ms): %lf\n", 1000*get_interval_by_sec(&sw));
+  double checksum = 0.0;
+  long long matrix_elements = (long long)matrix_dim * (long long)matrix_dim;
+  for (long long i = 0; i < matrix_elements; i++) {
+    checksum += m[i];
+  }
+  printf("LUD checksum: %.8f\n", checksum);
 
   if (do_verify){
     printf("After LUD\n");
     /* print_matrix(m, matrix_dim); */
     printf(">>>Verify<<<<\n");
-    lud_verify(mm, m, matrix_dim); 
+    lud_verify(mm, m, matrix_dim);
     free(mm);
   }
-  
+
   free(m);
 
   return EXIT_SUCCESS;

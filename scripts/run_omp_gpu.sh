@@ -5,6 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/build-omp-gpu"
 OUT_DIR=""
 ONLY=()
+default_threads() {
+  getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || echo 1
+}
+THREADS="${RODINIA_OPENMP_THREADS:-$(default_threads)}"
 
 usage() {
   cat <<'EOF'
@@ -17,8 +21,9 @@ Options:
   -h, --help           Show this help
 
 Benchmark names:
-  backprop b+tree cfd cfd_double cfd_pre cfd_pre_double heartwall hotspot
-  hotspot3d kmeans lavaMD lud nn nw pathfinder srad_v1 srad_v2
+  backprop bfs b+tree cfd cfd_double cfd_pre cfd_pre_double heartwall hotspot
+  hotspot3d kmeans lavaMD leukocyte lud myocyte nn nw particlefilter pathfinder
+  streamcluster srad_v1 srad_v2
 EOF
 }
 
@@ -110,6 +115,11 @@ if should_run backprop; then
   run_cmd backprop "${BIN_DIR}/backprop 65536"
 fi
 
+if should_run bfs; then
+  require_bin bfs
+  run_cmd bfs "${BIN_DIR}/bfs ${DATA_DIR}/bfs/graph1MW_6.txt"
+fi
+
 if should_run b+tree; then
   require_bin b+tree.out
   run_cmd b+tree \
@@ -163,9 +173,19 @@ if should_run lavaMD; then
   run_cmd lavaMD "${BIN_DIR}/lavaMD -boxes1d 10"
 fi
 
+if should_run leukocyte; then
+  require_bin leukocyte
+  run_cmd leukocyte "${BIN_DIR}/leukocyte 5 ${DATA_DIR}/leukocyte/testfile.avi"
+fi
+
 if should_run lud; then
   require_bin lud_omp_gpu
-  run_cmd lud "${BIN_DIR}/lud_omp_gpu -i ${DATA_DIR}/lud/512.dat"
+  run_cmd lud "${BIN_DIR}/lud_omp_gpu -n ${THREADS} -s 8000"
+fi
+
+if should_run myocyte; then
+  require_bin myocyte.out
+  run_cmd myocyte "${BIN_DIR}/myocyte.out 100 32 1"
 fi
 
 if should_run nn; then
@@ -185,9 +205,20 @@ if should_run nw; then
   run_cmd nw "${BIN_DIR}/needle 2048 10"
 fi
 
+if should_run particlefilter; then
+  require_bin particle_filter
+  run_cmd particlefilter "${BIN_DIR}/particle_filter -x 128 -y 128 -z 10 -np 10000"
+fi
+
 if should_run pathfinder; then
   require_bin pathfinder
   run_cmd pathfinder "${BIN_DIR}/pathfinder 100000 100 > \${RODINIA_BENCH_OUTPUT_DIR}/pathfinder.out"
+fi
+
+if should_run streamcluster; then
+  require_bin sc_omp
+  run_cmd streamcluster \
+    "${BIN_DIR}/sc_omp 10 20 256 65536 65536 1000 none \${RODINIA_BENCH_OUTPUT_DIR}/streamcluster.txt ${THREADS}"
 fi
 
 if should_run srad_v1; then

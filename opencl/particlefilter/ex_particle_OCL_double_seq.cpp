@@ -219,15 +219,10 @@ double randn(int * seed, int index) {
 }
 
 /**
- * Takes in a double and returns an integer that approximates to that double
- * @return if the mantissa < .5 => return value < input value; else return value > input value
+ * Takes in a double and returns the nearest integer value.
  */
 double roundDouble(double value) {
-    int newValue = (int) (value);
-    if (value - newValue < .5)
-        return newValue;
-    else
-        return newValue++;
+    return round(value);
 }
 
 /**

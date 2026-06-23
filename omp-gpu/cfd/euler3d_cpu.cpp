@@ -15,11 +15,7 @@ struct float3 {
 };
 
 #ifndef block_length
-#ifdef _OPENMP
-#error "you need to define block_length"
-#else
 #define block_length 1
-#endif
 #endif
 
 /*
@@ -151,15 +147,10 @@ inline float compute_speed_of_sound(float &density, float &pressure) {
 
 void compute_step_factor(int nelr, float *__restrict variables, float *areas,
                          float *__restrict step_factors) {
-#pragma omp target teams distribute default(shared)                              \
+#pragma omp target teams distribute parallel for                                 \
     map(to : variables [0:(nelr * NVAR)], areas [0:nelr])                       \
     map(tofrom : step_factors [0:nelr])
-  for (int blk = 0; blk < nelr / block_length; ++blk) {
-    int b_start = blk * block_length;
-    int b_end =
-        (blk + 1) * block_length > nelr ? nelr : (blk + 1) * block_length;
-#pragma omp parallel for
-    for (int i = b_start; i < b_end; i++) {
+  for (int i = 0; i < nelr; i++) {
       float density = variables[i + VAR_DENSITY * nelr];
 
       float3 momentum;
@@ -179,7 +170,6 @@ void compute_step_factor(int nelr, float *__restrict variables, float *areas,
       // we just do it all at once
       step_factors[i] = float(0.5f) / (std::sqrt(areas[i]) *
                                        (std::sqrt(speed_sqd) + speed_of_sound));
-    }
   }
 }
 
@@ -191,7 +181,7 @@ void compute_flux(int nelr, int *elements_surrounding_elements, float *normals,
                   float3 ff_flux_contribution_density_energy) {
   const float smoothing_coefficient = float(0.2f);
 
-#pragma omp target teams distribute                                              \
+#pragma omp target teams distribute parallel for                                 \
     map(to                                                                       \
         : elements_surrounding_elements [0:(nelr * NNB)],                        \
           normals [0:(NDIM * NNB * nelr)], variables [0:(nelr * NVAR)],          \
@@ -201,12 +191,7 @@ void compute_flux(int nelr, int *elements_surrounding_elements, float *normals,
                  ff_flux_contribution_momentum_y,                                \
                  ff_flux_contribution_momentum_z,                                \
                  ff_flux_contribution_density_energy)
-  for (int blk = 0; blk < nelr / block_length; ++blk) {
-    int b_start = blk * block_length;
-    int b_end =
-        (blk + 1) * block_length > nelr ? nelr : (blk + 1) * block_length;
-#pragma omp parallel for
-    for (int i = b_start; i < b_end; ++i) {
+  for (int i = 0; i < nelr; ++i) {
       float density_i = variables[i + VAR_DENSITY * nelr];
       float3 momentum_i;
       momentum_i.x = variables[i + (VAR_MOMENTUM + 0) * nelr];
@@ -374,23 +359,17 @@ void compute_flux(int nelr, int *elements_surrounding_elements, float *normals,
       fluxes[i + (VAR_MOMENTUM + 1) * nelr] = flux_i_momentum.y;
       fluxes[i + (VAR_MOMENTUM + 2) * nelr] = flux_i_momentum.z;
       fluxes[i + VAR_DENSITY_ENERGY * nelr] = flux_i_density_energy;
-    }
   }
 }
 
 void time_step(int j, int nelr, float *old_variables, float *variables,
                float *step_factors, float *fluxes) {
-#pragma omp target teams distribute                                              \
+#pragma omp target teams distribute parallel for                                 \
     map(to                                                                       \
         : old_variables [0:(nelr * NVAR)], step_factors [0:nelr],                \
           fluxes [0:(nelr * NVAR)])                                              \
     map(tofrom : variables [0:(nelr * NVAR)]) firstprivate(j)
-  for (int blk = 0; blk < nelr / block_length; ++blk) {
-    int b_start = blk * block_length;
-    int b_end =
-        (blk + 1) * block_length > nelr ? nelr : (blk + 1) * block_length;
-#pragma omp parallel for
-    for (int i = b_start; i < b_end; ++i) {
+  for (int i = 0; i < nelr; ++i) {
       float factor = step_factors[i] / float(RK + 1 - j);
 
       variables[i + VAR_DENSITY * nelr] =
@@ -408,7 +387,6 @@ void time_step(int j, int nelr, float *old_variables, float *variables,
       variables[i + VAR_DENSITY_ENERGY * nelr] =
           old_variables[i + VAR_DENSITY_ENERGY * nelr] +
           factor * fluxes[i + VAR_DENSITY_ENERGY * nelr];
-    }
   }
 }
 
