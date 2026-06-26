@@ -1,37 +1,23 @@
 
-#include <unistd.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <chrono>
 
 // #define BENCH_PRINT
 
+/*--------- using monotonic wall-clock time ------------*/
 
-/*----------- using cycle counter ------------*/
-     __inline__ uint64_t rdtsc() 
-     {
-          uint32_t lo, hi;
-             /* We cannot use "=A", since this would use %rax on x86_64 */
-             __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-                return (uint64_t)hi << 32 | lo;
-     }
-
-unsigned long long start_cycles;
-#define startCycle() (start_cycles = rdtsc())
-#define stopCycle(cycles) (cycles = rdtsc()-start_cycles)
-
-/*--------- using gettimeofday ------------*/
-
-#include <sys/time.h>
-
-struct timeval starttime;
-struct timeval endtime;
+extern std::chrono::steady_clock::time_point rodinia_pathfinder_starttime;
+extern std::chrono::steady_clock::time_point rodinia_pathfinder_endtime;
 
 #define startTime() \
-{ \
-  gettimeofday(&starttime, 0); \
-}
+do { \
+  rodinia_pathfinder_starttime = std::chrono::steady_clock::now(); \
+} while (0)
 #define stopTime(valusecs) \
-{ \
-  gettimeofday(&endtime, 0); \
-  valusecs = (endtime.tv_sec-starttime.tv_sec)*1000000+endtime.tv_usec-starttime.tv_usec; \
-}
+do { \
+  rodinia_pathfinder_endtime = std::chrono::steady_clock::now(); \
+  valusecs = std::chrono::duration_cast<std::chrono::microseconds>( \
+               rodinia_pathfinder_endtime - rodinia_pathfinder_starttime).count(); \
+} while (0)
+
+#define startCycle() startTime()
+#define stopCycle(cycles) stopTime(cycles)

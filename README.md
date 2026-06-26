@@ -36,10 +36,25 @@ Enable or disable backends as needed:
 
 ```bash
 cmake -S . -B build \
-  -DRODINIA_ENABLE_OPENMP=ON \
+  -DRODINIA_ENABLE_OMP_CPU=ON \
   -DRODINIA_ENABLE_OPENCL=ON \
   -DRODINIA_ENABLE_CUDA=OFF
 ```
+
+For Clang OpenMP GPU offload targets that need explicit target flags, pass them
+through `RODINIA_OMP_GPU_OFFLOAD_FLAGS`:
+
+```bash
+cmake -S . -B build-omp-gpu \
+  -DRODINIA_ENABLE_OMP_CPU=OFF \
+  -DRODINIA_ENABLE_OMP_GPU=ON \
+  -DRODINIA_ENABLE_OPENCL=OFF \
+  -DRODINIA_ENABLE_CUDA=OFF \
+  -DRODINIA_OMP_GPU_OFFLOAD_FLAGS="-fopenmp-targets=amdgcn-amd-amdhsa --offload-arch=gfx906"
+```
+
+Repeat `--offload-arch` in that string to build one binary for multiple AMD
+GPU architectures, such as `--offload-arch=gfx803 --offload-arch=gfx906`.
 
 CUDA-specific configuration:
 
