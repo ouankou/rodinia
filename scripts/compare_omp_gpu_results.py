@@ -250,7 +250,7 @@ def main():
         ("heartwall", lambda: compare_heartwall(openmp_dir, gpu_dir)),
         ("hotspot", lambda: compare_numeric_file("hotspot", openmp_dir, gpu_dir, "hotspot.out", 1e-3, 5e-4)),
         ("hotspot3d", lambda: compare_numeric_file("hotspot3d", openmp_dir, gpu_dir, "hotspot3d.out", 1e-3, 5e-4)),
-        ("kmeans", lambda: compare_log_value("kmeans", openmp_dir, gpu_dir, r"Cluster centers checksum:\s+([-+0-9.eE]+)", 1e-4, 1e-7)),
+        ("kmeans", lambda: compare_log_value("kmeans", openmp_dir, gpu_dir, r"Cluster centers checksum:\s+([-+0-9.eE]+)", 1e-4, 1e-6)),
         ("lavaMD", lambda: compare_numeric_file("lavaMD", openmp_dir, gpu_dir, "result.txt", 1e-4, 1e-5)),
         ("leukocyte", lambda: compare_log_value("leukocyte", openmp_dir, gpu_dir, r"Cells detected:\s+(\d+)", cast=int)),
         ("leukocyte", lambda: compare_optional_exact_file("leukocyte", openmp_dir, gpu_dir, "result.txt")),

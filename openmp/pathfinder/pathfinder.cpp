@@ -1,16 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <assert.h>
 
 #include "timer.h"
+
+std::chrono::steady_clock::time_point rodinia_pathfinder_starttime;
+std::chrono::steady_clock::time_point rodinia_pathfinder_endtime;
 
 void run(int argc, char** argv);
 
 /* define timer macros */
 #define pin_stats_reset()   startCycle()
 #define pin_stats_pause(cycles)   stopCycle(cycles)
-#define pin_stats_dump(cycles)    printf("timer: %Lu\n", cycles)
+#define pin_stats_dump(cycles)    printf("timer: %llu\n", cycles)
 
 #define BENCH_PRINT
 
