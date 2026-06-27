@@ -4,13 +4,6 @@
 
 #include <omp.h>
 
-/* FIXME: Keep this noinline for LLVM AMDGPU OpenMP offload. Inlining this
- * routine through the Fehlberg stages at -O3 can make device compilation
- * pathological. See ouankou/amd-omp-gpu-offloading#9.
- */
-#if defined(__GNUC__) || defined(__clang__)
-__attribute__((noinline))
-#endif
 void master(fp timeinst,
 					fp* initvalu,
 					fp* parameter,
